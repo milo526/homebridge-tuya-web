@@ -1,0 +1,57 @@
+{
+   "pluginAlias":"TuyaWebPlatform",
+   "pluginType":"platform",
+   "headerDisplay":"Homebridge plugin for Tuya devices using Home Assistant Tuya Web Api.",
+   "footerDisplay":"If you have any suggestions, please open an issue on [GitHub](https://github.com/milo526/homebridge-tuya-web/issues).",
+   "schema":{
+      "type":"object",
+      "properties":{
+         "name":{
+            "type":"string",
+            "title":"Name",
+            "default":"TuyaWebPlatform",
+            "description":"You shouldn't change this.",
+            "required":true
+         },
+         "options":{
+            "title":" ",
+            "type":"object",
+            "required":true,
+            "properties":{
+               "username":{
+                  "title":"Username",
+                  "type":"string",
+                  "description":"The username for the account that is registered in the Android/iOS App.",
+                  "required":true
+               },
+               "password":{
+                  "title":"Password",
+                  "type":"string",
+                  "description":"The password for the account that is registered in the Android/iOS App.",
+                  "required":true
+               },
+               "countryCode":{
+                  "title":"Country Code",
+                  "type":"string",
+                  "description":"Your account country code, e.g., 1 for USA or 86 for China.",
+                  "required":true
+               },
+               "platform":{
+                  "title":"Platform",
+                  "type":"string",
+                  "description":"The App where your account is registered. 'tuya' for Tuya Smart, 'smart_life' for Smart Life, 'jinvoo_smart' for Jinvoo Smart.",
+                  "default":"tuya",
+                  "required":true
+               },
+               "pollingInterval":{
+                  "title":"Polling Inverval",
+                  "type":"number",
+                  "description":"The frequency in seconds that the plugin polls the cloud to get device updates. When the devices are only controlled through Homebridge, you can set this to a low frequency (high interval number, e.g. 180 = 3 minutes). Defaults to 10.",
+                  "default":10,
+                  "required":true
+               }
+            }
+         }
+      }
+   }
+}
