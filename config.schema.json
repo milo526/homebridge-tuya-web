@@ -1,7 +1,7 @@
 {
    "pluginAlias":"TuyaWebPlatform",
    "pluginType":"platform",
-   "headerDisplay":"Homebridge plugin for Tuya devices using Home Assistant Tuya Web Api.",
+   "headerDisplay":"Homebridge plugin for Tuya devices using Home Assistant Tuya Web API.",
    "footerDisplay":"If you have any suggestions, please open an issue on [GitHub](https://github.com/milo526/homebridge-tuya-web/issues).",
    "schema":{
       "type":"object",
@@ -10,7 +10,7 @@
             "type":"string",
             "title":"Name",
             "default":"TuyaWebPlatform",
-            "description":"You shouldn't change this.",
+            "description":"You shouldn't need to change this.",
             "required":true
          },
          "options":{
