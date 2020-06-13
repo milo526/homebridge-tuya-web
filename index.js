@@ -137,6 +137,7 @@ class TuyaWebPlatform {
         this.accessories.set(uuid, deviceAccessory.homebridgeAccessory);
         break;
       case 'switch':
+      case 'scene':
       case 'outlet':
         deviceAccessory = new OutletAccessory(this, homebridgeAccessory, device);
         this.accessories.set(uuid, deviceAccessory.homebridgeAccessory);
