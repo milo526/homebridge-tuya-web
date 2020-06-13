@@ -17,7 +17,7 @@ This Homebridge Plugin implements the following features:
 ## Installation
 
 ```
-npm i @fratton/homebridge-tuya-web -g
+npm i fratton/homebridge-tuya-web -g
 ```
 
 ## Basic config.json
