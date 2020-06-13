@@ -2,6 +2,8 @@
 
 Homebridge plugin for Tuya devices using a cloud Tuya Web Api.
 
+**FORK support for "Scene" switch**
+
 This Homebridge plugin is based on the Home Assistent Tuya integration that implements a special Tuya Home Assistant API.
 
 See [Home Assistant Tuya integration](https://www.home-assistant.io/components/tuya/) and [Tuyaha python library](https://github.com/PaulAnnekov/tuyaha).
