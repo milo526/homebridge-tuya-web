@@ -103,19 +103,6 @@ The source code also has some unit tests to test API calls. Run the following co
 
 ## Version history
 
-##### Version 0.1.7 - 2019-08-18
+##### Version 0.1.8 - 2020-06-13
 
-* Fixed not correct updating after reboot of Homebridge.
-
-##### Version 0.1.6 - 2019-08-18
-
-* Added light accessory (made by niksauer, thanks!!)
-* Added overruling device type in config. Some dimmers are reported by Tuya API as `lights`. Dimmers don't have hue and saturation and therfor the device type has to  be overruled to `dimmer`.
-
-##### Version 0.1.5 - 2019-08-18
-
-* Fixed issue #17 - Outlets and switches not turning off in Home app when turned off with other app.
-
-##### Version 0.1.4 - 2019-08-09
-
-* Switch to regional Tuya Web API server after authentication was successful (EU / China / USA).
+Add support for scene switch
