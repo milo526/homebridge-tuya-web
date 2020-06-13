@@ -10,6 +10,7 @@
     "homebridge",
     "homebridge-plugin",
     "tuya",
+    "Tuya Web",
     "smartlife"
   ],
   "author": "fratton <fratton01@gmail.com>",
