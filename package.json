@@ -1,6 +1,6 @@
 {
   "name": "homebridge-tuya-web",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Homebrigde plugin for use with Tuya devices (uses Home Assistant Tuya Web API)",
   "main": "index.js",
   "scripts": {
@@ -12,7 +12,7 @@
     "tuya",
     "smartlife"
   ],
-  "author": "Milo Cesar <milocesar1@gmail.com>",
+  "author": "fratton <fratton01@gmail.com>",
   "license": "MIT",
   "engines": {
     "node": ">=0.12.0",
@@ -20,7 +20,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/milo526/homebridge-tuya-web"
+    "url": "https://github.com/fratton/homebridge-tuya-web"
   },
   "dependencies": {
     "request": "^2.88.0"
