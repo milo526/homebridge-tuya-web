@@ -25,7 +25,7 @@ class TuyaWebPlatform {
   constructor(log, config, api) {
     this.log = log;
     this.config = config;
-    this.pollingInterval = 20; // default 20 seconds
+    this.pollingInterval = 10; // default 10 seconds
     this.refreshInterval;
 
     if (!config || !config.options) {
@@ -34,7 +34,7 @@ class TuyaWebPlatform {
     }
 
     // Set cloud polling interval
-    this.pollingInterval = this.config.options.pollingInterval || 20;
+    this.pollingInterval = this.config.options.pollingInterval || 10;
 
     // Create Tuya Web API instance
     this.tuyaWebApi = new TuyaWebApi(
