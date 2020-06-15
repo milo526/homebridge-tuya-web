@@ -1,6 +1,6 @@
 {
   "name": "homebridge-tuya-web-beta",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "description": "Homebrigde plugin for use with Tuya devices (uses Home Assistant Tuya Web API)",
   "main": "index.js",
   "keywords": [
