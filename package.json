@@ -1,11 +1,41 @@
 {
-  "name": "homebridge-tuya-web",
-  "version": "0.1.9",
-  "description": "Homebrigde plugin for use with Tuya devices (uses Home Assistant Tuya Web API)",
-  "main": "index.js",
-  "scripts": {
-    "test": "mocha"
+  "_from": "github:fratton/homebridge-tuya-web",
+  "_inBundle": false,
+  "_integrity": "",
+  "_location": "/homebridge-tuya-web",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "git",
+    "raw": "fratton/homebridge-tuya-web",
+    "rawSpec": "fratton/homebridge-tuya-web",
+    "saveSpec": "github:fratton/homebridge-tuya-web",
+    "fetchSpec": null,
+    "gitCommittish": null
   },
+  "_requiredBy": [
+    "#USER"
+  ],
+  "_resolved": "github:fratton/homebridge-tuya-web#c6faa25f0e4df14fddfae943c92284c1bd96fd4c",
+  "_spec": "fratton/homebridge-tuya-web",
+  "_where": "/usr/local/lib/node_modules",
+  "author": "fratton <fratton01@gmail.com>",
+  "bugs": {
+    "url": "https://github.com/fratton/homebridge-tuya-web/issues"
+  },
+  "dependencies": {
+    "request": "^2.88.0"
+  },
+  "deprecated": false,
+  "description": "Homebrigde plugin for use with Tuya devices (uses Home Assistant Tuya Web API)",
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^6.2.0"
+  },
+  "engines": {
+    "homebridge": ">=0.2.0",
+    "node": ">=0.12.0"
+  },
+  "homepage": "https://github.com/fratton/homebridge-tuya-web#readme",
   "keywords": [
     "homebridge",
     "homebridge-plugin",
@@ -13,21 +43,19 @@
     "Tuya Web",
     "smartlife"
   ],
-  "author": "fratton <fratton01@gmail.com>",
   "license": "MIT",
-  "engines": {
-    "node": ">=0.12.0",
-    "homebridge": ">=0.2.0"
-  },
+  "main": "index.js",
+  "name": "@fratton/homebridge-tuya-web",
   "repository": {
     "type": "git",
-    "url": "https://github.com/fratton/homebridge-tuya-web"
+    "url": "git+https://github.com/fratton/homebridge-tuya-web.git"
   },
-  "dependencies": {
-    "request": "^2.88.0"
+  "scripts": {
+    "test": "mocha"
   },
-  "devDependencies": {
-    "chai": "^4.2.0",
-    "mocha": "^6.2.0"
+  "version": "0.1.10",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
   }
 }
