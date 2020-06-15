@@ -182,5 +182,3 @@ class TuyaWebPlatform {
     this.accessories.delete(accessory.uuid);
   }
 }
-
-
