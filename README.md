@@ -105,6 +105,11 @@ The source code also has some unit tests to test API calls. Run the following co
 
 ## Version history
 
+##### Version 0.1.10 - 2020-06-15
+
+- Add config panel
+- Remove long error API
+
 ##### Version 0.1.8 - 2020-06-13
 
 Add support for scene switch
