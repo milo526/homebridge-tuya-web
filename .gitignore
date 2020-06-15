@@ -1,6 +1,7 @@
 # Ignore compiled code
 dist
 .DS_Store
+.nova
 # ------------- Defaults ------------- #
 
 # Logs
