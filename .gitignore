@@ -1,6 +1,6 @@
 # Dev script to start Homebridge
 startHomebridge.sh
-
+.DS_Store
 # Logs
 logs
 *.log
