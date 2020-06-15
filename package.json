@@ -3,9 +3,6 @@
   "version": "0.1.7",
   "description": "Homebrigde plugin for use with Tuya devices (uses Home Assistant Tuya Web API)",
   "main": "index.js",
-  "scripts": {
-    "test": "mocha"
-  },
   "keywords": [
     "homebridge",
     "homebridge-plugin",
@@ -24,9 +21,5 @@
   },
   "dependencies": {
     "request": "^2.88.2"
-  },
-  "devDependencies": {
-    "chai": "^4.2.0",
-    "mocha": "^8.0.1"
   }
 }
