@@ -100,7 +100,7 @@ class TuyaWebPlatform {
         }
       }
     }).catch((error) => {
-      this.log.error('Error retrieving devices states', error);
+      this.log.debug('Error retrieving devices states', error);
     });
   }
 
