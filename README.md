@@ -16,6 +16,9 @@ This Homebridge Plugin implements the following features:
 - Uses simple and lightweight Cloud Web API to control and get state update from Tuya devices. You will need a stable internet connection to control the devices and get frequent state updates.
 - Device State Caching. State of devices is cached in memory, every time a HomeKit app request status updates from the devices this results in a very fast and responsive response. State cache is updated every 10 seconds and when controled from a HomeKit app. There can be a latancy in updates when a device is controled form an App/Hub/Controller other than HomeKit, e.g. from the Tuya Android/iOS App.
 
+- Scene :
+<img src="https://github.com/fratton/homebridge-tuya-web/raw/master/homebridge-tuya-scene.jpg">
+
 ## Installation
 
 ```
