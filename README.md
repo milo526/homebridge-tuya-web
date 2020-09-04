@@ -103,6 +103,8 @@ The `defaults` has these properties:
 - `id` The name or id for the device that is registered in the Android/iOS App. When matching on ID please provide the `Tuya ID` as shown during Homebridge boot.
 - `device_type` The `device_type` to be overruled. This can be useful for dimmers that are reported as `light` by the Tuya API and don't support hue and saturation or for outlets that are reported as `switch`.
 
+Note: After overriding the type of a device, it might appear duplicated in both HomeBridge (Accessories Tab) and the Home App. To solve this issue, go to the Homebridge settings (top right corner) and remove the device using the `Remove Single Cached Accessory` option.
+
 ## Hiding devices
 
 There are some valid reasons why you might not want to expose certain devices to HomeKit. You might for example have another plugin active which also exposes certain Tuya devices, adding these devices to this list will prevent them from showing up multiple times.
