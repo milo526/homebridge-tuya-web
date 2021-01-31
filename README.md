@@ -74,7 +74,7 @@ The `options` has these properties:
 - `username` Required. The username for the account that is registered in the Android/iOS App.
 - `password` Required. The password for the account that is registered in the Android/iOS App.
 - `countryCode` Required. Your account [country code](https://www.countrycode.org/), e.g., 1 for the USA or 86 for China.
-- `platform` Optional. The App where you registered your account. `tuya` for Tuya Smart, `smart_life` for Smart Life, `jinvoo_smart` for Jinvoo Smart. Defaults to `tuya`.
+- `platform` Optional. The App where you registered your account. `tuya` for Tuya Smart, `smart_life` for Smart Life, `jinvoo_smart` for Jinvoo Smart. Defaults to `tuya`. Also see _Platform_ section, below.
 - `pollingInterval` Optional. Defaults to empty which entails no polling. The frequency in **seconds** that the plugin polls the cloud to get device updates. When you exclusively control the devices through the plugin, you can set this to a low frequency (high interval number, e.g. 1800 = 30 minutes).
 
 > :warning: Sign-in with Apple, Google, Facebook or any other provider is **not** supported and, due to limitations, will probably never be supported :warning:  
@@ -197,3 +197,9 @@ There is currently support for the following device types within this plugin:
   - If they are not - don't open an issue. Ask [Tuya support](mailto:support@tuya.com) to support your device in their
     `/homeassistant` API
 - Remove the updated script, so your credentials won't leak
+
+# Determining platform for branded devices
+
+The Tuya cloud supports different branded platforms. If your devices came with a branded app then it is likely that your username and password are not recognized by the Tuya platform. If the app that came with your devices is not for one of the supported platforms (_tuya_, _smart\_life_ or _jinvoo\_smart_) you best bet is to check which of the apps for the supported platforms recognizes your devices. Unregister your device from the branded app (so that they are "factory clean" again) and then try re-registering them in the app for one of the supported platforms.
+
+The device checking script above can help you debugging this.
