@@ -78,6 +78,12 @@
               "description": "Can be found in your platform app (device info -> virtual ID) and is exposed during plugin boot (use the Tuya ID)",
               "required": true
             },
+            "max_brightness": {
+              "title": "The Device max brigthness",
+              "type": "int",
+              "default": "255",
+              "description": "Each dimmer light has different max value, find it and set it here"
+            },
             "device_type": {
               "title": "Device type",
               "type": "string",
@@ -259,6 +265,9 @@
           "items": [
             {
               "key": "defaults[].id"
+            },
+            {
+              "key": "defaults[].max_brigthness"
             },
             {
               "key": "defaults[].device_type"
