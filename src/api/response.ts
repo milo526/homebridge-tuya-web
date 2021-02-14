@@ -4,7 +4,6 @@ import { TuyaDeviceDefaults } from "../config";
 export type ExtendedBoolean = boolean | "true" | "false" | "True" | "False";
 
 type TuyaProperties = Partial<{
-  max_brightness: number;
   brightness: number | string;
   color: Partial<{ hue: string; saturation: string; brightness: string }>;
   color_mode: ColorModes;
@@ -23,6 +22,7 @@ type TuyaProperties = Partial<{
 
 type CustomProperties = Partial<{
   target_cover_state: CoverState;
+  max_brightness: number;
 }>;
 export type DeviceState = TuyaProperties & CustomProperties;
 
