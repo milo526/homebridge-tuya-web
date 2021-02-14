@@ -62,15 +62,9 @@ export class BrightnessCharacteristic extends TuyaWebCharacteristic {
       data?.color?.brightness !== undefined
     ) {
       stateValue = Number(data.color.brightness);
-    } else if (
-      data?.brightness &&
-      this.accessory.deviceConfig.config?.max_brightness
-    ) {
-      stateValue = Math.round(
-        (Number(data.brightness) /
-          this.accessory.deviceConfig.config?.max_brightness) *
-          100
-      );
+    } else if (data?.brightness) {
+      const max_brightness = data?.max_brightness ?? 255;
+      stateValue = Math.round((Number(data.brightness) / max_brightness) * 100);
     }
 
     if (stateValue) {
