@@ -63,14 +63,14 @@ export class LightAccessory extends ColorAccessory {
 
   validateConfigOverwrites(config: TuyaDeviceDefaults): string[] {
     const errors = super.validateConfigOverwrites(config);
-    if (config?.max_brigthness) {
-      const maxBrigthness = Number(config.max_brigthness);
+    if (config?.max_brightness) {
+      const maxBrigthness = config.max_brightness;
       if (!maxBrigthness) {
         errors.push(
-          "Wrong value configured for `max_brigthness`, should be a number"
+          "Wrong value configured for `max_brightness`, should be a number"
         );
       } else {
-        config.max_brigthness = maxBrigthness;
+        config.max_brightness = maxBrigthness;
       }
     }
     return errors;

@@ -81,7 +81,7 @@
             "max_brightness": {
               "title": "The Device max brigthness",
               "type": "number",
-              "default": "255",
+              "default": 255,
               "description": "Each dimmer light has different max value, find it and set it here"
             },
             "device_type": {
@@ -267,7 +267,7 @@
               "key": "defaults[].id"
             },
             {
-              "key": "defaults[].max_brigthness"
+              "key": "defaults[].max_brightness"
             },
             {
               "key": "defaults[].device_type"
