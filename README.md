@@ -106,6 +106,9 @@ The `defaults` has these properties:
 
 - `id` The name or id for the device that is registered in the Android/iOS App. When matching on ID please provide the `Tuya ID` as shown during Homebridge boot.
 - `device_type` The `device_type` to be overruled. This can be useful for dimmers that are reported as `light` by the Tuya API and don't support hue and saturation or for outlets that are reported as `switch`.
+- `max_brightness` The maximum value of your dimmer light brightness (It seems that not all dimmers has a the same value), you can get this value by setting your dimmer to 100% in Tuya\Smartlife app, then go into your homebridge main log screen and open the homekit app, once the accessories load you can view the output and see the current value of each light, this output value is your accessories maximum brightness. 
+
+[14/02/2021, 19:26:34] [TuyaWebPlatform] [office light] Characteristic.Brightness - [GET] 255
 
 > Note: After overriding the device type, it might appear duplicated in both HomeBridge (Accessories Tab) and the Home App. To solve this issue, go to the Homebridge settings (top right corner) and remove the device using the `Remove Single Cached Accessory` option.
 
