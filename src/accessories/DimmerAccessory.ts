@@ -53,7 +53,7 @@ export class DimmerAccessory extends BaseAccessory {
           "Wrong value configured for `max_brigthness`, should be a number"
         );
       } else {
-        config.max_brigthness = maxBrigthness
+        config.max_brigthness = maxBrigthness;
       }
     }
     return errors;
