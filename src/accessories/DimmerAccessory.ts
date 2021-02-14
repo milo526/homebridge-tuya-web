@@ -7,6 +7,7 @@ import {
   OnCharacteristic,
 } from "./characteristics";
 import { TuyaDevice } from "../api/response";
+import { TuyaDeviceDefaults } from "../config";
 
 export class DimmerAccessory extends BaseAccessory {
   constructor(
@@ -41,5 +42,20 @@ export class DimmerAccessory extends BaseAccessory {
     }
 
     return super.deviceSupportedCharacteristics;
+  }
+
+  validateConfigOverwrites(config: TuyaDeviceDefaults): string[] {
+    const errors = super.validateConfigOverwrites(config);
+    if (config?.max_brigthness) {
+      const maxBrigthness = Number(config.max_brigthness);
+      if (!maxBrigthness) {
+        errors.push(
+          "Wrong value configured for `max_brigthness`, should be a number"
+        );
+      } else {
+        config.max_brigthness = maxBrigthness
+      }
+    }
+    return errors;
   }
 }
