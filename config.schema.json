@@ -78,12 +78,6 @@
               "description": "Can be found in your platform app (device info -> virtual ID) and is exposed during plugin boot (use the Tuya ID)",
               "required": true
             },
-            "max_brightness": {
-              "title": "Device max brightness",
-              "type": "number",
-              "default": 255,
-              "description": "Each dimmer light has different max value, find it and set it here"
-            },
             "device_type": {
               "title": "Device type",
               "type": "string",
@@ -136,6 +130,18 @@
                 }
               ],
               "required": true
+            },
+            "max_brightness": {
+              "title": "Device max brightness",
+              "type": "number",
+              "default": 255,
+              "description": "Dimmer lights might have different maximum value, find it and set it here"
+            },
+            "min_brightness": {
+              "title": "Device min brightness",
+              "type": "number",
+              "default": 1,
+              "description": "Dimmer lights might have different minimum value, find it and set it here"
             },
             "min_temper": {
               "title": "Minimal Temperature",
@@ -267,7 +273,16 @@
               "key": "defaults[].id"
             },
             {
-              "key": "defaults[].max_brightness"
+              "key": "defaults[].max_brightness",
+              "condition": {
+                "functionBody": "return (model.defaults[arrayIndices].device_type == 'dimmer')"
+              }
+            },
+            {
+              "key": "defaults[].min_brightness",
+              "condition": {
+                "functionBody": "return (model.defaults[arrayIndices].device_type == 'dimmer')"
+              }
             },
             {
               "key": "defaults[].device_type"

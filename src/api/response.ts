@@ -23,6 +23,7 @@ type TuyaProperties = Partial<{
 type CustomProperties = Partial<{
   target_cover_state: CoverState;
   max_brightness: number;
+  min_brightness: number;
 }>;
 export type DeviceState = TuyaProperties & CustomProperties;
 
