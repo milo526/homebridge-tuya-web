@@ -42,10 +42,13 @@ export class BrightnessCharacteristic extends TuyaWebCharacteristic {
     callback: CharacteristicSetCallback
   ): void {
     // Set device state in Tuya Web API
-    const minBrightness = (this.accessory as DimmerAccessory).minBrightness;
-    const maxBrightness = (this.accessory as DimmerAccessory).maxBrightness;
     const dimmerPercentage = (homekitValue as number) / 100;
-    const value = (maxBrightness + minBrightness) * dimmerPercentage;
+    const correctionFactor = 10;
+    const value = Math.round(
+      (100 - correctionFactor) * dimmerPercentage +
+        correctionFactor +
+        Number.EPSILON
+    );
 
     this.accessory
       .setDeviceState("brightnessSet", { value }, { brightness: homekitValue })
@@ -68,7 +71,10 @@ export class BrightnessCharacteristic extends TuyaWebCharacteristic {
       stateValue = Number(data.color.brightness);
     } else if (data?.brightness) {
       const maxBrightness = (this.accessory as DimmerAccessory).maxBrightness;
-      stateValue = Math.round((Number(data.brightness) / maxBrightness) * 100);
+      const brightness = Number(data.brightness);
+      stateValue = Math.round(
+        (brightness / maxBrightness) * 100 + Number.EPSILON
+      );
     }
 
     if (stateValue) {
