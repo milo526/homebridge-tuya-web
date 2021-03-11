@@ -11,7 +11,6 @@ import {
 } from "./characteristics";
 import { ColorAccessory } from "./ColorAccessory";
 import { TuyaDevice } from "../api/response";
-import { TuyaDeviceDefaults } from "../config";
 
 export class LightAccessory extends ColorAccessory {
   constructor(
