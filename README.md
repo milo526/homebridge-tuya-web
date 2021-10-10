@@ -34,6 +34,8 @@ This plugin implements the following features:
 - Uses simple and lightweight Cloud Web API to control and get state update from Tuya devices. You will need a stable internet connection to control the devices.
 - Device State Caching. State of devices is cached in memory, every time a HomeKit app request status updates from the devices this results in a very fast and responsive response. There can be a latency in updates when a device is controlled form an App/Hub/Controller other than HomeKit, e.g. from the Tuya Android/iOS App.
 
+NOTE: this plugin (and all other Tuya plugins at the moment) does NOT support bluetooth devices connected via a BLE mesh gateway / hub. Follow [this](https://github.com/iRayanKhan/homebridge-tuya/issues/164) or [this issue](https://github.com/tuya/tuya-homebridge/issues/119) for updates. As a workaround, you can create a Scene within Tuya / Smart Life app, e.g. "Close the curtains", and expose this scene to HomeKit via this plugin, see [Adding Scenes](https://github.com/milo526/homebridge-tuya-web#add-all-scenes-to-homekit) for details. This will allow native Homekit automation and control of your hub-connected Tuya devices.
+
 ## Installation
 
 ```
