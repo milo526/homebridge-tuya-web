@@ -169,7 +169,7 @@
               "required": false
             },
             "max_kelvin": {
-              "title": "Maximal Brightness",
+              "title": "Maximal Kelvin",
               "type": "string",
               "pattern": "^-?\\d+$",
               "description": "The kelvin value that Tuya returns when your light is at its coolest (most blue).",
