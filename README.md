@@ -74,7 +74,7 @@ You can also get community help in the [Homebridge Discord Server](https://disco
 
 The `options` has these properties:
 
-- `username` Required. The username for the account that is registered in the Android/iOS App.
+- `username` Required. The username for the account that is registered in the Android/iOS App. *_Due to a bug in the API the `username` can't contain dots_.
 - `password` Required. The password for the account that is registered in the Android/iOS App.
 - `countryCode` Required. Your account [country code](https://www.countrycode.org/), e.g., 1 for the USA or 86 for China.
 - `platform` Optional. The App where you registered your account. `tuya` for Tuya Smart, `smart_life` for Smart Life, `jinvoo_smart` for Jinvoo Smart. Defaults to `tuya`. Also see _Platform_ section, below.
