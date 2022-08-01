@@ -206,3 +206,9 @@ There is currently support for the following device types within this plugin:
 The Tuya cloud supports different branded platforms. If your devices came with a branded app then it is likely that your username and password are not recognized by the Tuya platform. If the app that came with your devices is not for one of the supported platforms (_tuya_, _smart_life_ or _jinvoo_smart_) you best bet is to check which of the apps for the supported platforms recognizes your devices. Unregister your device from the branded app (so that they are "factory clean" again) and then try re-registering them in the app for one of the supported platforms.
 
 The device checking script above can help you debugging this.
+
+# Additional Resources
+
+If you need more assistance on the topic of Plugin installation, please have a look at the following external resources:
+
+- YouTube-Video: [Tuya Geräte über Homebridge-Web steuern - Einfach & Schnell ⏰](https://www.youtube.com/watch?v=6Jhon4lWmKc) (🇩🇪)
