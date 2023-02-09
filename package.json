@@ -18,7 +18,9 @@
     "homebridge",
     "homebridge-plugin",
     "tuya",
-    "smartlife"
+    "smartlife",
+    "tuyawebplatform",
+    "tuyaweb"
   ],
   "author": "Milo Cesar <milocesar1@gmail.com>",
   "license": "MIT",
