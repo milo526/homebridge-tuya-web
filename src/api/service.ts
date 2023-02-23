@@ -31,15 +31,18 @@ export class TuyaWebApi {
     private tuyaPlatform: TuyaPlatform = "tuya",
     private log?: Logger,
     private authTokenWaitTime: number = 180
-  ) {}
+  ) { }
 
   public async getAllDeviceStates(): Promise<TuyaDevice[] | undefined> {
     return this.discoverDevices();
   }
 
   public async discoverDevices(): Promise<TuyaDevice[] | undefined> {
-    if (!this.session?.hasValidToken()) {
-      throw new Error("No valid token");
+    if (this.session == null) {
+      throw new Error("Sessions object is null");
+    }
+    if (!this.session.hasValidToken()) {
+      this.getOrRefreshToken();
     }
 
     const { data } = await this.sendRequest<DiscoveryPayload>(
@@ -69,8 +72,11 @@ export class TuyaWebApi {
   }
 
   public async getDeviceState(deviceId: string): Promise<DeviceState> {
-    if (!this.session?.hasValidToken()) {
-      throw new Error("No valid token");
+    if (this.session == null) {
+      throw new Error("Sessions object is null");
+    }
+    if (!this.session.hasValidToken()) {
+      this.getOrRefreshToken();
     }
 
     const { data } = await this.sendRequest<DeviceQueryPayload>(
@@ -106,8 +112,11 @@ export class TuyaWebApi {
     method: Method,
     payload: TuyaApiPayload<Method>
   ): Promise<void> {
-    if (!this.session?.hasValidToken()) {
-      throw new Error("No valid token");
+    if (this.session == null) {
+      throw new Error("Sessions object is null");
+    }
+    if (!this.session.hasValidToken()) {
+      this.getOrRefreshToken();
     }
 
     const { data } = await this.sendRequest(
@@ -187,7 +196,7 @@ export class TuyaWebApi {
       data = (
         await this.sendRequest(
           "/homeassistant/access.do?grant_type=refresh_token&refresh_token=" +
-            this.session.refreshToken,
+          this.session.refreshToken,
           {},
           "GET"
         )
@@ -195,17 +204,20 @@ export class TuyaWebApi {
     }
 
     if (data.responseStatus === "error") {
-      if (
-        data.errorMsg.includes("Authentication error: you cannot auth exceed once in") &&
-        !retryingAfterError
-      ) {
-        this.log?.warn("Cannot acquire token, waiting ${this.authTokenWaitTime} seconds.");
-        await delay(this.authTokenWaitTime * 1000);
-        this.log?.info("Retrying authentication after previous error.");
-        return this.getOrRefreshToken(true);
+      if (data.errorMsg.includes("you cannot auth exceed once in")) {
+        if (!retryingAfterError) {
+          this.log?.warn("Cannot acquire token, waiting ${this.authTokenWaitTime} seconds.");
+          await delay(this.authTokenWaitTime * 1000);
+          this.log?.info("Retrying authentication after previous error.");
+          return this.getOrRefreshToken(true);
+        } else {
+          this.log?.warn("Got again auth error, even after delaying for {this.authTokenWaitTime * 1000} seconds.");
+          throw new AuthenticationError(data.errorMsg);
+        }
+      } else {
+        this.log?.error("Got auth error " + data.errorMsg);
+        throw new AuthenticationError(data.errorMsg);
       }
-
-      throw new AuthenticationError(data.errorMsg);
     }
 
     if (!this.session?.hasToken()) {
