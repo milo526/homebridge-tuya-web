@@ -26,6 +26,7 @@ type Config = {
     countryCode?: string;
     platform?: TuyaPlatform;
     pollingInterval?: number;
+    authTokenWaitTime?: number;
   };
   defaults?: Partial<TuyaDeviceDefaults>[];
   scenes?: boolean | string[];

@@ -29,7 +29,8 @@ export class TuyaWebApi {
     private password: string,
     private countryCode: string,
     private tuyaPlatform: TuyaPlatform = "tuya",
-    private log?: Logger
+    private log?: Logger,
+    private authTokenWaitTime: number = 180
   ) {}
 
   public async getAllDeviceStates(): Promise<TuyaDevice[] | undefined> {
@@ -195,11 +196,11 @@ export class TuyaWebApi {
 
     if (data.responseStatus === "error") {
       if (
-        data.errorMsg === "you cannot auth exceed once in 60 seconds" &&
+        data.errorMsg.includes("Authentication error: you cannot auth exceed once in") &&
         !retryingAfterError
       ) {
-        this.log?.warn("Cannot acquire token, waiting 65 seconds.");
-        await delay(65 * 1000);
+        this.log?.warn("Cannot acquire token, waiting ${this.authTokenWaitTime} seconds.");
+        await delay(this.authTokenWaitTime * 1000);
         this.log?.info("Retrying authentication after previous error.");
         return this.getOrRefreshToken(true);
       }

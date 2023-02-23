@@ -102,7 +102,8 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
       options.password,
       options.countryCode,
       options.platform,
-      this.log
+      this.log,
+      options.authTokenWaitTime
     );
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
