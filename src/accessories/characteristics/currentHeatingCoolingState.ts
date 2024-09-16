@@ -1,7 +1,8 @@
 import { Characteristic, CharacteristicGetCallback } from "homebridge";
 import { TuyaWebCharacteristic } from "./base";
 import { BaseAccessory } from "../BaseAccessory";
-import { DeviceState } from "../../api/response";
+import { DeviceState, ExtendedBoolean } from "../../api/response";
+import { TuyaBoolean } from "../../helpers/TuyaBoolean";
 
 export class CurrentHeatingCoolingStateCharacteristic extends TuyaWebCharacteristic {
   public static Title = "Characteristic.CurrentHeatingCoolingState";
@@ -47,11 +48,11 @@ export class CurrentHeatingCoolingStateCharacteristic extends TuyaWebCharacteris
   }
 
   updateValue(data: DeviceState, callback?: CharacteristicGetCallback): void {
-    if (String(data?.state).toLowerCase() === "false") {
+    if (!TuyaBoolean(data?.state as ExtendedBoolean)) {
       this.accessory.setCharacteristic(
         this.homekitCharacteristic,
         this.CurrentHeatingCoolingState.OFF,
-        !callback
+        !callback,
       );
       this.debug("[UPDATE] %S", "OFF");
       callback && callback(null, this.CurrentHeatingCoolingState.OFF);
@@ -63,15 +64,15 @@ export class CurrentHeatingCoolingStateCharacteristic extends TuyaWebCharacteris
       wind: this.CurrentHeatingCoolingState.COOL,
       hot: this.CurrentHeatingCoolingState.HEAT,
       cold: this.CurrentHeatingCoolingState.COOL,
-    }[data?.mode || "hot"];
+    }[data?.mode ?? "hot"];
     this.debug(
       "[UPDATE] %s",
-      mode === this.CurrentHeatingCoolingState.HEAT ? "HEAT" : "COOL"
+      mode === this.CurrentHeatingCoolingState.HEAT ? "HEAT" : "COOL",
     );
     this.accessory.setCharacteristic(
       this.homekitCharacteristic,
       mode,
-      !callback
+      !callback,
     );
     callback && callback(null, mode);
   }

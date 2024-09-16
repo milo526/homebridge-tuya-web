@@ -9,7 +9,7 @@ assignees: ''
 
 <!--
 Everything that is placed between these <! - - and - - > are considered comments and will not render. 
-Make sure to place all your information outside of these notations or I will not be able to read it!
+Make sure to place all your information outside of these notations, or I will not be able to read it!
 -->
 
 <!--
@@ -25,10 +25,6 @@ I am human and to err is human, I make mistakes, if you think I closed your issu
 I am not able to solve all your problems and entertain all your feature requests, part of this is because I don't actually own a lot of tuya devices.
 A lot of the work I do is based on documentations and how some devices are supposed to work.
 Who could have guessed, not all devices behave as they should.
-
-So once more thank you for opening an issue, almost all issues here improve the usability of this plugin!
-If this plugin does help you and you have some money to spare please consider donating.
-Find the donate button here: https://github.com/milo526/homebridge-tuya-web you can either donate monthly through a subscription or make a one-time-donation trough the bunq.me link.
 -->
 
 <!--
@@ -52,7 +48,7 @@ Did you check other issues to see if somebody already requested support?
 If there is already an issue please add your support to that issue instead of opening a new one.
 If I already said no to other similar requests please consider if my reasoning is still valid, if it is, your issue will probably be closed with the same feedback.
 
-If non of these apply to you please explain what type of device it is you wish to get support added for.
+If none of these apply to you please explain what type of device it is you wish to get support added for.
 -->
 
 **Device information**

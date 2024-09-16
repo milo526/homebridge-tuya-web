@@ -1,32 +1,35 @@
 export class MapRange {
   private constructor(
-    private fromStart,
-    private fromEnd,
-    private toStart,
-    private toEnd
+    public readonly tuyaStart: number,
+    public readonly tuyaEnd: number,
+    public readonly homekitStart: number,
+    public readonly homekitEnd: number,
   ) {}
 
-  static from(start, end): { to: (start: number, end: number) => MapRange } {
+  static tuya(
+    start: number,
+    end: number,
+  ): { homeKit: (start: number, end: number) => MapRange } {
     return {
-      to: (toStart, toEnd) => {
+      homeKit: (toStart, toEnd) => {
         return new MapRange(start, end, toStart, toEnd);
       },
     };
   }
 
-  public map(input: number): number {
+  public tuyaToHomekit(tuyaValue: number): number {
     return (
-      ((input - this.fromStart) * (this.toEnd - this.toStart)) /
-        (this.fromEnd - this.fromStart) +
-      this.toStart
+      ((tuyaValue - this.tuyaStart) * (this.homekitEnd - this.homekitStart)) /
+        (this.tuyaEnd - this.tuyaStart) +
+      this.homekitStart
     );
   }
 
-  public inverseMap(input: number): number {
+  public homekitToTuya(homeKitValue: number): number {
     return (
-      ((input - this.toStart) * (this.fromEnd - this.fromStart)) /
-        (this.toEnd - this.toStart) +
-      this.fromStart
+      ((homeKitValue - this.homekitStart) * (this.tuyaEnd - this.tuyaStart)) /
+        (this.homekitEnd - this.homekitStart) +
+      this.tuyaStart
     );
   }
 }

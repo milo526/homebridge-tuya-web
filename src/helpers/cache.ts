@@ -14,7 +14,7 @@ export class Cache {
 
   public set(data: DeviceState): void {
     this.validUntil = Cache.getCurrentEpoch() + TUYA_DEVICE_TIMEOUT + 5;
-    this.value = data;
+    this.merge(data);
   }
 
   public renew() {
@@ -37,7 +37,7 @@ export class Cache {
       return null;
     }
 
-    return this.value || null;
+    return this.value ?? null;
   }
 
   private static getCurrentEpoch(): number {

@@ -21,7 +21,7 @@ export abstract class ColorAccessory extends BaseAccessory {
     const brightness = Number(
       cachedValue
         ? cachedValue.brightness
-        : BrightnessCharacteristic.DEFAULT_VALUE
+        : BrightnessCharacteristic.DEFAULT_VALUE,
     );
     const tuyaData = {
       hue: color.hue,
@@ -32,7 +32,13 @@ export abstract class ColorAccessory extends BaseAccessory {
     await this.setDeviceState(
       "colorSet",
       { color: tuyaData },
-      { color, color_mode: COLOR_MODES[0] }
+      {
+        color: {
+          hue: String(color.hue),
+          saturation: String(color.saturation),
+        },
+        color_mode: COLOR_MODES[0],
+      },
     );
   }
 
@@ -40,18 +46,14 @@ export abstract class ColorAccessory extends BaseAccessory {
     () => {
       const { resolve, reject } = this.debouncePromise!;
       this.debouncePromise = undefined;
-      const hue = Number(
-        this.hue !== undefined ? this.hue : HueCharacteristic.DEFAULT_VALUE
-      );
+      const hue = Number(this.hue ?? HueCharacteristic.DEFAULT_VALUE);
       const saturation = Number(
-        this.saturation !== undefined
-          ? this.saturation
-          : SaturationCharacteristic.DEFAULT_VALUE
+        this.saturation ?? SaturationCharacteristic.DEFAULT_VALUE,
       );
       this.setRemoteColor({ hue, saturation }).then(resolve).catch(reject);
     },
     100,
-    { maxWait: 500 }
+    { maxWait: 500 },
   );
 
   private debouncePromise?: DebouncedPromise<void>;
@@ -59,15 +61,14 @@ export abstract class ColorAccessory extends BaseAccessory {
   private saturation?: number;
 
   public setColor(
-    color: Partial<{ hue: number; saturation: number }>
+    color: Partial<{ hue: number; saturation: number }>,
   ): Promise<void> {
     if (!this.debouncePromise) {
       this.debouncePromise = new DebouncedPromise<void>();
     }
 
-    this.hue = color.hue !== undefined ? color.hue : this.hue;
-    this.saturation =
-      color.saturation !== undefined ? color.saturation : this.saturation;
+    this.hue = color.hue ?? this.hue;
+    this.saturation = color.saturation ?? this.saturation;
 
     this.setColorDebounced();
 

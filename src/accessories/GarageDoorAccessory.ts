@@ -12,14 +12,14 @@ import { TuyaDevice } from "../api/response";
 export class GarageDoorAccessory extends BaseAccessory {
   constructor(
     platform: TuyaWebPlatform,
-    homebridgeAccessory: HomebridgeAccessory,
-    deviceConfig: TuyaDevice
+    homebridgeAccessory: HomebridgeAccessory | undefined,
+    deviceConfig: TuyaDevice,
   ) {
     super(
       platform,
       homebridgeAccessory,
       deviceConfig,
-      Categories.GARAGE_DOOR_OPENER
+      Categories.GARAGE_DOOR_OPENER,
     );
   }
 

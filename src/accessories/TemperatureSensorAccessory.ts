@@ -11,8 +11,8 @@ import { TuyaDevice } from "../api/response";
 export class TemperatureSensorAccessory extends BaseAccessory {
   constructor(
     platform: TuyaWebPlatform,
-    homebridgeAccessory: HomebridgeAccessory,
-    deviceConfig: TuyaDevice
+    homebridgeAccessory: HomebridgeAccessory | undefined,
+    deviceConfig: TuyaDevice,
   ) {
     super(platform, homebridgeAccessory, deviceConfig, Categories.SENSOR);
   }
@@ -32,7 +32,7 @@ export class TemperatureSensorAccessory extends BaseAccessory {
       const tempFactor = Number(config.current_temperature_factor);
       if (!tempFactor) {
         errors.push(
-          "Wrong value configured for `current_temperature_factor`, should be a number"
+          "Wrong value configured for `current_temperature_factor`, should be a number",
         );
       } else {
         config.current_temperature_factor = tempFactor;

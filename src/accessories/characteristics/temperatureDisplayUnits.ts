@@ -24,7 +24,7 @@ export class TemperatureDisplayUnitsCharacteristic extends TuyaWebCharacteristic
 
   updateValue(
     data: DeviceState | undefined,
-    callback?: CharacteristicGetCallback
+    callback?: CharacteristicGetCallback,
   ): void {
     callback && callback(null, this.TemperatureDisplayUnits.CELSIUS);
   }

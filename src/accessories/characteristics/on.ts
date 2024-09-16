@@ -5,7 +5,8 @@ import {
 } from "homebridge";
 import { TuyaWebCharacteristic } from "./base";
 import { BaseAccessory } from "../BaseAccessory";
-import { DeviceState } from "../../api/response";
+import { DeviceState, ExtendedBoolean } from "../../api/response";
+import { TuyaBoolean } from "../../helpers/TuyaBoolean";
 
 export class OnCharacteristic extends TuyaWebCharacteristic {
   public static Title = "Characteristic.On";
@@ -14,7 +15,7 @@ export class OnCharacteristic extends TuyaWebCharacteristic {
     return accessory.platform.Characteristic.On;
   }
 
-  public static isSupportedByAccessory(accessory): boolean {
+  public static isSupportedByAccessory(accessory: BaseAccessory): boolean {
     return accessory.deviceConfig.data.state !== undefined;
   }
 
@@ -30,13 +31,13 @@ export class OnCharacteristic extends TuyaWebCharacteristic {
 
   public setRemoteValue(
     homekitValue: CharacteristicValue,
-    callback: CharacteristicSetCallback
+    callback: CharacteristicSetCallback,
   ): void {
     // Set device state in Tuya Web API
     const value = homekitValue ? 1 : 0;
 
     this.accessory
-      .setDeviceState("turnOnOff", { value }, { state: homekitValue })
+      .setDeviceState("turnOnOff", { value }, { state: Boolean(homekitValue) })
       .then(() => {
         this.debug("[SET] %s %s", homekitValue, value);
         callback();
@@ -46,15 +47,16 @@ export class OnCharacteristic extends TuyaWebCharacteristic {
 
   updateValue(data: DeviceState, callback?: CharacteristicGetCallback): void {
     if (data?.state !== undefined) {
-      const stateValue = String(data.state).toLowerCase() === "true";
+      const stateValue = TuyaBoolean(data.state as ExtendedBoolean);
       this.accessory.setCharacteristic(
         this.homekitCharacteristic,
         stateValue,
-        !callback
+        !callback,
       );
       callback && callback(null, stateValue);
     } else {
-      callback && callback(new Error("Could not get state from data"));
+      callback &&
+        callback(new Error("Could not find required property 'state'"));
     }
   }
 }

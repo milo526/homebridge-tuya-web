@@ -26,8 +26,15 @@ import { TuyaWebApi } from "./api/service";
 import { TuyaPlatforms } from "./api/platform";
 import { GarageDoorAccessory } from "./accessories/GarageDoorAccessory";
 import { TemperatureSensorAccessory } from "./accessories/TemperatureSensorAccessory";
+import { Cache } from "./helpers/cache";
+import { WindowAccessory } from "./accessories/WindowAccessory";
 
-export type HomebridgeAccessory = PlatformAccessory & {
+export type HomebridgeAccessory = PlatformAccessory<
+  Partial<{
+    cache: Cache;
+    deviceId: string;
+  }>
+> & {
   controller?: BaseAccessory;
 };
 
@@ -38,30 +45,29 @@ export type HomebridgeAccessory = PlatformAccessory & {
  */
 export class TuyaWebPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service = this.api.hap.Service;
-  public readonly Characteristic: typeof Characteristic = this.api.hap
-    .Characteristic;
+  public readonly Characteristic: typeof Characteristic =
+    this.api.hap.Characteristic;
 
   // this is used to track restored cached accessories
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public readonly accessories: Map<string, HomebridgeAccessory> = new Map();
+  public readonly accessories = new Map<string, HomebridgeAccessory>();
 
   // Cloud polling interval in seconds
   private readonly pollingInterval?: number;
 
   public readonly tuyaWebApi!: TuyaWebApi;
 
-  private failedToInitAccessories: Map<TuyaDeviceType, string[]> = new Map();
+  private failedToInitAccessories = new Map<TuyaDeviceType, string[]>();
 
   constructor(
     public readonly log: Logger,
     public readonly config: TuyaWebConfig,
-    public readonly api: API
+    public readonly api: API,
   ) {
     this.log.debug("Finished initializing platform:", this.config.name);
 
     if (!config || !config.options) {
       this.log.info(
-        "No options found in configuration file, disabling plugin."
+        "No options found in configuration file, disabling plugin.",
       );
       return;
     }
@@ -83,7 +89,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
       this.log.error(
         "Invalid platform provided, received %s but must be one of %s",
         options.platform,
-        TuyaPlatforms
+        TuyaPlatforms,
       );
     }
 
@@ -96,14 +102,16 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
       options.password,
       options.countryCode,
       options.platform,
-      this.log
+      this.log,
     );
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
     // in order to ensure they weren't added to homebridge already. This event can also be used
     // to start discovery of new accessories.
-    this.api.on("didFinishLaunching", async () => this.postLaunchSetup());
+    this.api.on("didFinishLaunching", () => {
+      void this.postLaunchSetup.bind(this)();
+    });
   }
 
   private async postLaunchSetup(): Promise<void> {
@@ -116,37 +124,50 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
         //Tuya will probably still complain if we fetch a new request on the exact second.
         const pollingInterval = Math.max(
           this.pollingInterval,
-          TUYA_DISCOVERY_TIMEOUT + 5
+          TUYA_DISCOVERY_TIMEOUT + 5,
         );
         this.log?.info(
           "Enable cloud polling with interval %ss",
-          pollingInterval
+          pollingInterval,
         );
         // Set interval for refreshing device states
         setInterval(() => {
-          this.refreshDeviceStates().catch((error) => {
-            this.log.error(error.message);
+          this.refreshDeviceStates().catch((e: unknown) => {
+            if (e instanceof Error) {
+              this.log.error(e.message);
+              if (e.stack) {
+                this.log.debug(e.stack);
+              }
+            }
           });
         }, pollingInterval * 1000);
       }
     } catch (e) {
       if (e instanceof AuthenticationError) {
         this.log.error("Authentication error: %s", e.message);
-      } else {
-        this.log.error(e.message);
-        this.log.debug(e);
+        return;
       }
+
+      if (e instanceof Error) {
+        this.log.error(e.message);
+        if (e.stack) {
+          this.log.debug(e.stack);
+        }
+        return;
+      }
+
+      this.log.error("Unknown error: %s", e);
     }
   }
 
   /**
    * This function is invoked when homebridge restores cached accessories from disk at startup.
-   * It should be used to setup event handlers for characteristics and update respective values.
+   * It should be used to set up event handlers for characteristics and update respective values.
    */
   public configureAccessory(accessory: PlatformAccessory): void {
     this.log.info("Loading accessory from cache:", accessory.displayName);
 
-    // add the restored accessory to the accessories cache so we can track if it has already been registered
+    // add the restored accessory to the accessories cache, so we can track if it has already been registered
     this.accessories.set(accessory.UUID, accessory);
   }
 
@@ -170,7 +191,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
 
   private async refreshDeviceStates(devices?: TuyaDevice[]): Promise<void> {
     devices =
-      devices ||
+      devices ??
       this.filterDeviceList(await this.tuyaWebApi.getAllDeviceStates());
     if (!devices) {
       return;
@@ -188,60 +209,58 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
         this.log.error(
           "Could not find Homebridge device with UUID (%s) for Tuya device (%s)",
           uuid,
-          device.name
+          device.name,
         );
       }
     }
   }
 
   private addAccessory(device: TuyaDevice): void {
-    const deviceType: TuyaDeviceType = device.dev_type || "switch";
+    const deviceType: TuyaDeviceType = device.dev_type ?? "switch";
     const uuid = this.api.hap.uuid.generate(device.id);
-    const homebridgeAccessory = this.accessories.get(uuid)!;
+    const homebridgeAccessory = this.accessories.get(uuid);
 
     // Construct new accessory
-    /* eslint-disable @typescript-eslint/no-explicit-any */
     switch (deviceType) {
       case "cover":
-        new CoverAccessory(this, homebridgeAccessory, device as any);
+        new CoverAccessory(this, homebridgeAccessory, device);
         break;
       case "climate":
-        new ClimateAccessory(this, homebridgeAccessory, device as any);
+        new ClimateAccessory(this, homebridgeAccessory, device);
         break;
       case "dimmer":
-        new DimmerAccessory(this, homebridgeAccessory, device as any);
+        new DimmerAccessory(this, homebridgeAccessory, device);
         break;
       case "fan":
-        new FanAccessory(this, homebridgeAccessory, device as any);
+        new FanAccessory(this, homebridgeAccessory, device);
         break;
       case "garage":
-        new GarageDoorAccessory(this, homebridgeAccessory, device as any);
+        new GarageDoorAccessory(this, homebridgeAccessory, device);
         break;
       case "light":
-        new LightAccessory(this, homebridgeAccessory, device as any);
+        new LightAccessory(this, homebridgeAccessory, device);
         break;
       case "outlet":
-        new OutletAccessory(this, homebridgeAccessory, device as any);
+        new OutletAccessory(this, homebridgeAccessory, device);
         break;
       case "scene":
-        new SceneAccessory(this, homebridgeAccessory, device as any);
+        new SceneAccessory(this, homebridgeAccessory, device);
         break;
       case "switch":
-        new SwitchAccessory(this, homebridgeAccessory, device as any);
+        new SwitchAccessory(this, homebridgeAccessory, device);
         break;
       case "temperature_sensor":
-        new TemperatureSensorAccessory(
-          this,
-          homebridgeAccessory,
-          device as any
-        );
+        new TemperatureSensorAccessory(this, homebridgeAccessory, device);
+        break;
+      case "window":
+        new WindowAccessory(this, homebridgeAccessory, device);
         break;
 
       default:
         if (!this.failedToInitAccessories.get(deviceType)) {
           this.log.warn(
             "Could not init class for device type [%s]",
-            deviceType
+            deviceType,
           );
           this.failedToInitAccessories.set(deviceType, []);
         }
@@ -251,7 +270,6 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
         ]);
         break;
     }
-    /* eslint-enable @typescript-eslint/no-explicit-any */
   }
 
   private filterDeviceList(devices: TuyaDevice[] | undefined): TuyaDevice[] {
@@ -266,7 +284,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
   }
 
   async discoverDevices(): Promise<void> {
-    let devices = (await this.tuyaWebApi.discoverDevices()) || [];
+    let devices = (await this.tuyaWebApi.discoverDevices()) ?? [];
 
     // Is device type overruled in config defaults?
     devices = this.applyConfigOverwrites(devices);
@@ -280,7 +298,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
           'Device type for "%s" is overruled in config from %s to: "%s"',
           device.name,
           device.config.old_dev_type,
-          device.dev_type
+          device.dev_type,
         );
       }
     });
@@ -295,7 +313,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
         const device = this.accessories.get(cachedDeviceId)!;
         this.log.warn(
           "Device: %s - is no longer available and will be removed",
-          device.displayName
+          device.displayName,
         );
         this.removeAccessory(device);
       }
@@ -321,13 +339,13 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
       return devices;
     }
 
-    for (const configOverwrite of configOverwriteData as Array<
-      Partial<TuyaDeviceDefaults> & { old_dev_type: TuyaDeviceType }
-    >) {
+    for (const configOverwrite of configOverwriteData as (Partial<TuyaDeviceDefaults> & {
+      old_dev_type: TuyaDeviceType;
+    })[]) {
       if (!configOverwrite.id) {
         this.log.warn(
           "Missing required `id` property on device configuration, received:\r\n%s",
-          JSON.stringify(configOverwrite, undefined, 2)
+          JSON.stringify(configOverwrite, undefined, 2),
         );
         continue;
       }
@@ -335,30 +353,32 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
       if (!configOverwrite.device_type) {
         this.log.warn(
           "Missing required `device_type` property on device configuration, received:\r\n%s",
-          JSON.stringify(configOverwrite, undefined, 2)
+          JSON.stringify(configOverwrite, undefined, 2),
         );
         continue;
       }
 
-      configOverwrite.device_type = configOverwrite.device_type.toLowerCase() as TuyaDeviceType;
+      configOverwrite.device_type =
+        configOverwrite.device_type.toLowerCase() as TuyaDeviceType;
 
       const device = devices.find(
         (device) =>
-          device.id === configOverwrite.id || device.name === configOverwrite.id
+          device.id === configOverwrite.id ||
+          device.name === configOverwrite.id,
       );
       if (!device) {
         this.log.warn(
           'Tried overwriting device config for: "%s" which is not a valid device-id or device-name.',
-          configOverwrite.id
+          configOverwrite.id,
         );
         continue;
       }
 
-      if (!TuyaDeviceTypes.includes(configOverwrite.device_type!)) {
+      if (!TuyaDeviceTypes.includes(configOverwrite.device_type)) {
         this.log.warn(
           'Tried overwriting device config for: "%s" - device-type "%s" is not a valid device-type.',
           device.name,
-          configOverwrite.device_type
+          configOverwrite.device_type,
         );
         continue;
       }
@@ -384,7 +404,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     }
 
     const sceneList = new DeviceList(
-      devices.filter((d) => d.dev_type === "scene")
+      devices.filter((d) => d.dev_type === "scene"),
     );
 
     if (
@@ -406,7 +426,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
 
       this.log.warn(
         "Tried allowing non-existing scene %s",
-        toAllowSceneIdentifier
+        toAllowSceneIdentifier,
       );
     }
 
@@ -444,7 +464,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
 
       this.log.warn(
         "Tried disallowing non-existing device %s",
-        toDisallowAccessoryIdentifier
+        toDisallowAccessoryIdentifier,
       );
     }
 
@@ -455,7 +475,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     return this.api.platformAccessory;
   }
 
-  public get generateUUID(): (BinaryLike) => string {
+  public get generateUUID(): (uuid: string) => string {
     return this.api.hap.uuid.generate;
   }
 }

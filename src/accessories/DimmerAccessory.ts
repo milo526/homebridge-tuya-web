@@ -11,8 +11,8 @@ import { TuyaDevice } from "../api/response";
 export class DimmerAccessory extends BaseAccessory {
   constructor(
     platform: TuyaWebPlatform,
-    homebridgeAccessory: HomebridgeAccessory,
-    deviceConfig: TuyaDevice
+    homebridgeAccessory: HomebridgeAccessory | undefined,
+    deviceConfig: TuyaDevice,
   ) {
     super(platform, homebridgeAccessory, deviceConfig, Categories.LIGHTBULB);
   }
@@ -30,8 +30,8 @@ export class DimmerAccessory extends BaseAccessory {
     if (this.deviceConfig.config) {
       const supportedCharacteristics: GeneralCharacteristic[] = [];
       if (
-        (this.deviceConfig.config?.dimmer_characteristics || []).includes(
-          "Brightness"
+        (this.deviceConfig.config?.dimmer_characteristics ?? []).includes(
+          "Brightness",
         )
       ) {
         supportedCharacteristics.push(BrightnessCharacteristic);

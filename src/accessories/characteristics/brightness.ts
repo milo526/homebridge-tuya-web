@@ -8,6 +8,7 @@ import { inspect } from "util";
 import { TuyaWebCharacteristic } from "./base";
 import { BaseAccessory } from "../BaseAccessory";
 import { DeviceState } from "../../api/response";
+import { MapRange } from "../../helpers/MapRange";
 
 export class BrightnessCharacteristic extends TuyaWebCharacteristic {
   public static Title = "Characteristic.Brightness";
@@ -16,9 +17,7 @@ export class BrightnessCharacteristic extends TuyaWebCharacteristic {
     return accessory.platform.Characteristic.Brightness;
   }
 
-  public static DEFAULT_VALUE = 100;
-
-  public static isSupportedByAccessory(accessory): boolean {
+  public static isSupportedByAccessory(accessory: BaseAccessory): boolean {
     const configData = accessory.deviceConfig.data;
     return (
       configData.brightness !== undefined ||
@@ -26,11 +25,39 @@ export class BrightnessCharacteristic extends TuyaWebCharacteristic {
     );
   }
 
+  public static DEFAULT_VALUE = 100;
+
+  public get usesColorBrightness(): boolean {
+    const deviceData = this.accessory.deviceConfig.data;
+    return (
+      deviceData?.color_mode !== undefined &&
+      deviceData?.color_mode in COLOR_MODES &&
+      deviceData?.color?.brightness !== undefined
+    );
+  }
+
+  public get rangeMapper(): MapRange {
+    let minTuya = 10;
+    let maxTuya = 100;
+    if (
+      this.accessory.deviceConfig.config?.min_brightness !== undefined &&
+      this.accessory.deviceConfig.config?.max_brightness !== undefined
+    ) {
+      minTuya = Number(this.accessory.deviceConfig.config?.min_brightness);
+      maxTuya = Number(this.accessory.deviceConfig.config?.max_brightness);
+    } else if (this.usesColorBrightness) {
+      minTuya = 1;
+      maxTuya = 255;
+    }
+
+    return MapRange.tuya(minTuya, maxTuya).homeKit(0, 100);
+  }
+
   public getRemoteValue(callback: CharacteristicGetCallback): void {
     this.accessory
       .getDeviceState()
       .then((data) => {
-        this.debug("[GET] %s", data?.brightness || data?.color?.brightness);
+        this.debug("[GET] %s", data?.brightness ?? data?.color?.brightness);
         this.updateValue(data, callback);
       })
       .catch(this.accessory.handleError("GET", callback));
@@ -38,13 +65,18 @@ export class BrightnessCharacteristic extends TuyaWebCharacteristic {
 
   public setRemoteValue(
     homekitValue: CharacteristicValue,
-    callback: CharacteristicSetCallback
+    callback: CharacteristicSetCallback,
   ): void {
-    // Set device state in Tuya Web API
-    const value = ((homekitValue as number) / 10) * 9 + 10;
+    const value = this.rangeMapper.homekitToTuya(Number(homekitValue));
 
     this.accessory
-      .setDeviceState("brightnessSet", { value }, { brightness: homekitValue })
+      .setDeviceState(
+        "brightnessSet",
+        { value },
+        this.usesColorBrightness
+          ? { color: { brightness: String(value) } }
+          : { brightness: value },
+      )
       .then(() => {
         this.debug("[SET] %s", value);
         callback();
@@ -53,32 +85,45 @@ export class BrightnessCharacteristic extends TuyaWebCharacteristic {
   }
 
   updateValue(data: DeviceState, callback?: CharacteristicGetCallback): void {
-    // data.brightness only valid for color_mode != color > https://github.com/PaulAnnekov/tuyaha/blob/master/tuyaha/devices/light.py
-    // however, according to local tuya app, calculation for color_mode=color is still incorrect (even more so in lower range)
-    let stateValue: number | undefined;
-    if (
-      data?.color_mode !== undefined &&
-      data?.color_mode in COLOR_MODES &&
-      data?.color?.brightness !== undefined
-    ) {
-      stateValue = Number(data.color.brightness);
-    } else if (data?.brightness) {
-      stateValue = Math.round((Number(data.brightness) / 255) * 100);
+    const tuyaValue = Number(
+      this.usesColorBrightness ? data.color?.brightness : data.brightness,
+    );
+    const homekitValue = this.rangeMapper.tuyaToHomekit(tuyaValue);
+
+    if (homekitValue > 100) {
+      this.warn(
+        "Characteristic 'Brightness' will receive value higher than allowed (%s) since provided Tuya value (%s) " +
+          "exceeds configured maximum Tuya value (%s). Please update your configuration!",
+        homekitValue,
+        tuyaValue,
+        this.rangeMapper.tuyaEnd,
+      );
+    } else if (homekitValue < 0) {
+      this.warn(
+        "Characteristic 'Brightness' will receive value lower than allowed (%s) since provided Tuya value (%s) " +
+          "is lower than configured minimum Tuya value (%s). Please update your configuration!",
+        homekitValue,
+        tuyaValue,
+        this.rangeMapper.tuyaStart,
+      );
     }
 
-    if (stateValue) {
+    if (homekitValue) {
       this.accessory.setCharacteristic(
         this.homekitCharacteristic,
-        stateValue,
-        !callback
+        homekitValue,
+        !callback,
       );
-      callback && callback(null, stateValue);
+      callback && callback(null, homekitValue);
       return;
     }
 
-    this.error(
-      "Tried to set brightness but failed to parse data. \n %s",
-      inspect(data)
+    const error = new Error(
+      `Tried to set brightness but failed to parse data. \n ${inspect(data)}`,
     );
+
+    this.error(error.message);
+
+    callback && callback(error);
   }
 }

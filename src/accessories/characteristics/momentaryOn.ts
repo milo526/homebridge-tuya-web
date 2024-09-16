@@ -26,7 +26,7 @@ export class MomentaryOnCharacteristic extends TuyaWebCharacteristic {
 
   public setRemoteValue(
     homekitValue: CharacteristicValue,
-    callback: CharacteristicSetCallback
+    callback: CharacteristicSetCallback,
   ): void {
     // Set device state in Tuya Web API
     const value = homekitValue ? 1 : 0;
@@ -44,7 +44,7 @@ export class MomentaryOnCharacteristic extends TuyaWebCharacteristic {
         const reset = () => {
           this.accessory.service?.setCharacteristic(
             this.homekitCharacteristic,
-            0
+            0,
           );
         };
         setTimeout(reset.bind(this), 100);

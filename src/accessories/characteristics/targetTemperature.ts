@@ -56,7 +56,7 @@ export class TargetTemperatureCharacteristic extends TuyaWebCharacteristic {
     });
   }
 
-  public static isSupportedByAccessory(accessory): boolean {
+  public static isSupportedByAccessory(accessory: BaseAccessory): boolean {
     return accessory.deviceConfig.data.temperature !== undefined;
   }
 
@@ -72,7 +72,7 @@ export class TargetTemperatureCharacteristic extends TuyaWebCharacteristic {
 
   public setRemoteValue(
     homekitValue: CharacteristicValue,
-    callback: CharacteristicSetCallback
+    callback: CharacteristicSetCallback,
   ): void {
     const temperature = Number(homekitValue);
 
@@ -84,7 +84,7 @@ export class TargetTemperatureCharacteristic extends TuyaWebCharacteristic {
           temperature:
             temperature /
             (this.accessory as ClimateAccessory).targetTemperatureFactor,
-        }
+        },
       )
       .then(() => {
         this.debug("[SET] %s %s", homekitValue, temperature);
@@ -105,7 +105,7 @@ export class TargetTemperatureCharacteristic extends TuyaWebCharacteristic {
       this.accessory.setCharacteristic(
         this.homekitCharacteristic,
         temperature,
-        !callback
+        !callback,
       );
       callback && callback(null, temperature);
     } else {

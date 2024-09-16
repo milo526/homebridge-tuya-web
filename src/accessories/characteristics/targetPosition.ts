@@ -8,9 +8,10 @@ import {
 } from "homebridge";
 import { TuyaWebCharacteristic } from "./base";
 import { BaseAccessory } from "../BaseAccessory";
-import { DeviceState } from "../../api/response";
-import delay from "../../helpers/delay";
+import { CoverState, DeviceState, ExtendedBoolean } from "../../api/response";
 import { CoverAccessory } from "../CoverAccessory";
+import delay from "../../helpers/delay";
+import { TuyaBoolean } from "../../helpers/TuyaBoolean";
 
 export class TargetPositionCharacteristic extends TuyaWebCharacteristic {
   public static Title = "Characteristic.TargetPosition";
@@ -40,7 +41,7 @@ export class TargetPositionCharacteristic extends TuyaWebCharacteristic {
 
   public setRemoteValue(
     homekitValue: CharacteristicValue,
-    callback: CharacteristicSetCallback
+    callback: CharacteristicSetCallback,
   ): void {
     const value = (homekitValue as number) === 0 ? 0 : 1;
 

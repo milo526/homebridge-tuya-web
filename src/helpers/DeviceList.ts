@@ -1,7 +1,7 @@
 import { TuyaDevice } from "../api/response";
 
 export class DeviceList {
-  private idNameMap: { [key: string]: string } = {};
+  private idNameMap: Record<string, string> = {};
 
   constructor(devices: TuyaDevice[]) {
     devices.forEach((device) => {
@@ -20,19 +20,11 @@ export class DeviceList {
 
     if (Object.values(this.idNameMap).includes(identifier)) {
       return Object.keys(this.idNameMap).find(
-        (key) => this.idNameMap[key] === identifier
+        (key) => this.idNameMap[key] === identifier,
       );
     }
 
     return undefined;
-  }
-
-  public nameForIdentifier(identifier: string): string | undefined {
-    const id = this.find(identifier);
-    if (!id) {
-      return undefined;
-    }
-    return this.idNameMap[id];
   }
 
   /**

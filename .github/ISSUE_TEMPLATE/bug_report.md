@@ -9,7 +9,7 @@ assignees: ''
 
 <!--
 Everything that is placed between these <! - - and - - > are considered comments and will not render. 
-Make sure to place all your information outside of these notations or I will not be able to read it!
+Make sure to place all your information outside of these notations, or I will not be able to read it!
 -->
 
 <!--
@@ -25,10 +25,6 @@ I am human and to err is human, I make mistakes, if you think I closed your issu
 I am not able to solve all your problems and entertain all your feature requests, part of this is because I don't actually own a lot of tuya devices.
 A lot of the work I do is based on documentations and how some devices are supposed to work.
 Who could have guessed, not all devices behave as they should.
-
-So once more thank you for opening an issue, almost all issues here improve the usability of this plugin!
-If this plugin does help you and you have some money to spare please consider donating.
-Find the donate button here: https://github.com/milo526/homebridge-tuya-web you can either donate monthly through a subscription or make a one-time-donation trough the bunq.me link.
 -->
 
 **Describe the bug**
@@ -85,7 +81,7 @@ Steps to reproduce the behavior:
  }
  ```
  
- you might have some extra settings or miss some settings here. Please make sure to include all of the settings you have.
+ you might have some extra settings or miss some settings here. Please make sure to include all the settings you have.
  For your own sanity ensure that you at least remove your password!
  -->
  
@@ -98,7 +94,7 @@ Steps to reproduce the behavior:
  Follow the steps as outlined under the heading "How to check whether the api this library uses can control your device"
  https://github.com/milo526/homebridge-tuya-web#how-to-check-whether-the-api-this-library-uses-can-control-your-device
  And include the full output here.
- Yes this is quite some work but it is also very important, if you do not provide me this information;
+ Yes this is quite some work, but it is also very important, if you do not provide me this information;
  I can almost guarantee you that the first thing I do is request you to do this (or close your issue outright).
  You will probably not be helped before this information is provided, this is not because I like to be rude;
  this is because this information is essential for me to do almost anything with this plugin for you.
@@ -111,7 +107,6 @@ Add any other context about the problem here.
 
 <!--
 Not following this template might result in outright closure of your issue!
-If this surprises you, you already failed cause it was also stated as the first line of this template :)
 
 As a closing remark,
 thank you for opening a bug report. You are now helping this plugin improve!

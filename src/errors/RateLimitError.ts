@@ -1,4 +1,4 @@
-export class RatelimitError extends Error {
+export class RateLimitError extends Error {
   constructor(message: string, reason?: string) {
     if (reason) {
       message += ` - ${reason}`;

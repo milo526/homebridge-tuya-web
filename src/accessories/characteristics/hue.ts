@@ -18,7 +18,7 @@ export class HueCharacteristic extends TuyaWebCharacteristic<ColorAccessory> {
 
   public static DEFAULT_VALUE = 0;
 
-  public static isSupportedByAccessory(accessory): boolean {
+  public static isSupportedByAccessory(accessory: BaseAccessory): boolean {
     const configData = accessory.deviceConfig.data;
     return configData.color_mode !== undefined;
   }
@@ -35,7 +35,7 @@ export class HueCharacteristic extends TuyaWebCharacteristic<ColorAccessory> {
 
   public setRemoteValue(
     homekitValue: CharacteristicValue,
-    callback: CharacteristicSetCallback
+    callback: CharacteristicSetCallback,
   ): void {
     // Set device state in Tuya Web API
     const value = homekitValue as number;
@@ -62,7 +62,7 @@ export class HueCharacteristic extends TuyaWebCharacteristic<ColorAccessory> {
     this.accessory.setCharacteristic(
       this.homekitCharacteristic,
       stateValue,
-      !callback
+      !callback,
     );
     callback && callback(null, stateValue);
   }

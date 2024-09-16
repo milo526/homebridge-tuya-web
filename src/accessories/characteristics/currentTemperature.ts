@@ -19,8 +19,8 @@ export class CurrentTemperatureCharacteristic extends TuyaWebCharacteristic {
     });
   }
 
-  public static isSupportedByAccessory(accessory): boolean {
-    return accessory.deviceConfig.data.current_temperature;
+  public static isSupportedByAccessory(accessory: BaseAccessory): boolean {
+    return accessory.deviceConfig.data.current_temperature !== undefined;
   }
 
   public getRemoteValue(callback: CharacteristicGetCallback): void {
@@ -45,7 +45,7 @@ export class CurrentTemperatureCharacteristic extends TuyaWebCharacteristic {
       this.accessory.setCharacteristic(
         this.homekitCharacteristic,
         currentTemperature,
-        !callback
+        !callback,
       );
       callback && callback(null, currentTemperature);
     } else {

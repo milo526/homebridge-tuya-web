@@ -1,24 +1,24 @@
 {
   "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
   "extends": [
     "eslint:recommended",
-    "plugin:@typescript-eslint/eslint-recommended",
-    "plugin:@typescript-eslint/recommended", // uses the recommended rules from the @typescript-eslint/eslint-plugin
-    "prettier",
-    "prettier/@typescript-eslint"
+    "plugin:@typescript-eslint/recommended-type-checked",
+    "plugin:@typescript-eslint/stylistic-type-checked",
+    "prettier"
   ],
   "parserOptions": {
     "ecmaVersion": 2018,
-    "sourceType": "module"
+    "sourceType": "module",
+    "project": true
   },
-  "ignorePatterns": ["dist"],
   "rules": {
     "dot-notation": "off",
     "eqeqeq": "warn",
     "curly": ["warn", "all"],
     "prefer-arrow-callback": ["warn"],
     "max-len": ["warn", 140],
-    "no-console": ["warn"], // use the provided Homebridge log method instead
+    "no-console": ["error"], // use the provided Homebridge log method instead
     "no-non-null-assertion": ["off"],
     "lines-between-class-members": [
       "warn",

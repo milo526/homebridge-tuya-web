@@ -9,7 +9,7 @@ assignees: ''
 
 <!--
 Everything that is placed between these <! - - and - - > are considered comments and will not render. 
-Make sure to place all your information outside of these notations or I will not be able to read it!
+Make sure to place all your information outside of these notations, or I will not be able to read it!
 -->
 
 <!--
@@ -28,13 +28,9 @@ Who could have guessed, not all devices behave as they should.
 
 I might say no to your feature request.
 Some smarter people with more experience in opensource software put it nicely
-"Rule #1 of open-source: no is temporary, yes is forever."
+"Rule #1 of open-source: saying no is temporary, yes is forever."
 If I now start working on implementing your request I will need to support it for as long as I maintain this plugin.
 I might not be ready for that kind of commitment for some feature requests.
-
-So once more thank you for opening an issue, almost all issues here improve the usability of this plugin!
-If this plugin does help you and you have some money to spare please consider donating.
-Find the donate button here: https://github.com/milo526/homebridge-tuya-web you can either donate monthly through a subscription or make a one-time-donation trough the bunq.me link.
 -->
 
 **Is your feature request related to a problem? Please describe.**
@@ -59,7 +55,6 @@ Add any other context or screenshots about the feature request here.
 
 <!--
 Not following this template might result in outright closure of your issue!
-If this surprises you, you already failed cause it was also stated as the first line of this template :)
 
 As a closing remark,
 thank you for opening a feature request. You are now helping this plugin improve!

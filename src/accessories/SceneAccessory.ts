@@ -10,8 +10,8 @@ import { TuyaDevice } from "../api/response";
 export class SceneAccessory extends BaseAccessory {
   constructor(
     platform: TuyaWebPlatform,
-    homebridgeAccessory: HomebridgeAccessory,
-    deviceConfig: TuyaDevice
+    homebridgeAccessory: HomebridgeAccessory | undefined,
+    deviceConfig: TuyaDevice,
   ) {
     super(platform, homebridgeAccessory, deviceConfig, Categories.SWITCH);
   }

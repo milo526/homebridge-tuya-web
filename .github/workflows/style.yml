@@ -1,4 +1,4 @@
-name: Build and Lint
+name: Linter & Prettier
 
 on: [push, pull_request]
 
@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         # the Node.js versions to build on
-        node-version: [10.x, 12.x, 13.x]
+        node-version: [16.x, 18.x, 20.x]
 
     steps:
       - uses: actions/checkout@v2

@@ -1,9 +1,9 @@
 import { ClimateMode, ColorModes } from "../accessories/characteristics";
 import { TuyaDeviceDefaults } from "../config";
 
-type TuyaBoolean = boolean | "true" | "false" | "True" | "False";
+export type ExtendedBoolean = boolean | "true" | "false" | "True" | "False";
 
-export type DeviceState = Partial<{
+type TuyaProperties = Partial<{
   brightness: number | string;
   color: Partial<{ hue: string; saturation: string; brightness: string }>;
   color_mode: ColorModes;
@@ -12,17 +12,22 @@ export type DeviceState = Partial<{
   max_temper: number | string;
   min_temper: number | string;
   mode: ClimateMode;
-  online: TuyaBoolean;
+  online: ExtendedBoolean;
   speed: number | string;
   speed_level: number | string;
-  state: TuyaBoolean | CoverState;
-  support_stop: TuyaBoolean;
+  state: ExtendedBoolean | CoverState;
+  support_stop: ExtendedBoolean;
   temperature: number | string;
 }>;
 
+type CustomProperties = Partial<{
+  target_cover_state: CoverState;
+}>;
+export type DeviceState = TuyaProperties & CustomProperties;
+
 export enum CoverState {
-  Open = 1,
-  Close = 2,
+  Opening = 1,
+  Closing = 2,
   Stopped = 3,
 }
 
@@ -37,8 +42,9 @@ export const TuyaDeviceTypes = [
   "scene",
   "switch",
   "temperature_sensor",
+  "window",
 ] as const;
-export type TuyaDeviceType = typeof TuyaDeviceTypes[number];
+export type TuyaDeviceType = (typeof TuyaDeviceTypes)[number];
 
 export const HomeAssistantDeviceTypes = [
   "climate",
@@ -50,41 +56,49 @@ export const HomeAssistantDeviceTypes = [
   "scene",
   "switch",
 ] as const;
-export type HomeAssistantDeviceType = typeof HomeAssistantDeviceTypes[number];
+export type HomeAssistantDeviceType = (typeof HomeAssistantDeviceTypes)[number];
 
-export type TuyaDevice = {
+export interface TuyaDevice {
   data: DeviceState;
   name: string;
   id: string;
   dev_type: TuyaDeviceType;
   ha_type: HomeAssistantDeviceType;
   config?: Partial<TuyaDeviceDefaults> & { old_dev_type: TuyaDeviceType };
-};
+}
 
-export type TuyaHeader = {
+export interface TuyaRequestHeader {
+  name: "Discovery" | "QueryDevice" | TuyaApiMethod;
+  namespace: "discovery" | "query" | "control";
+  payloadVersion: 1;
+}
+
+export interface TuyaResponseHeader {
+  /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
   code:
     | "FrequentlyInvoke"
     | "SUCCESS"
     | "TargetOffline"
     | "UnsupportedOperation"
     | string;
+  /* eslint-enable @typescript-eslint/no-redundant-type-constituents */
   payloadVersion: 1;
   msg?: string;
-};
+}
 
-export type DiscoveryPayload = {
+export interface DiscoveryPayload {
   payload: {
     devices: TuyaDevice[];
   };
-  header: TuyaHeader;
-};
+  header: TuyaResponseHeader;
+}
 
-export type DeviceQueryPayload = {
+export interface DeviceQueryPayload {
   payload: {
     data: DeviceState;
   };
-  header: TuyaHeader;
-};
+  header: TuyaResponseHeader;
+}
 
 export type TuyaApiMethod =
   | "brightnessSet"
@@ -95,22 +109,21 @@ export type TuyaApiMethod =
   | "temperatureSet"
   | "turnOnOff"
   | "windSpeedSet";
-export type TuyaApiPayload<
-  Method extends TuyaApiMethod
-> = Method extends "brightnessSet"
-  ? { value: number }
-  : Method extends "colorSet"
-  ? { color: { hue: number; saturation: number; brightness: number } }
-  : Method extends "colorTemperatureSet"
-  ? { value: number }
-  : Method extends "modeSet"
-  ? { value: ClimateMode }
-  : Method extends "startStop"
-  ? { value: 0 }
-  : Method extends "temperatureSet"
-  ? { value: number }
-  : Method extends "turnOnOff"
-  ? { value: 0 | 1 }
-  : Method extends "windSpeedSet"
-  ? { value: number }
-  : never;
+export type TuyaApiPayload<Method extends TuyaApiMethod> =
+  Method extends "brightnessSet"
+    ? { value: number }
+    : Method extends "colorSet"
+    ? { color: { hue: number; saturation: number; brightness: number } }
+    : Method extends "colorTemperatureSet"
+    ? { value: number }
+    : Method extends "modeSet"
+    ? { value: ClimateMode }
+    : Method extends "startStop"
+    ? { value: 0 }
+    : Method extends "temperatureSet"
+    ? { value: number }
+    : Method extends "turnOnOff"
+    ? { value: 0 | 1 }
+    : Method extends "windSpeedSet"
+    ? { value: number }
+    : never;

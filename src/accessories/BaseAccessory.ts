@@ -14,7 +14,7 @@ import debounce from "lodash.debounce";
 import { PLUGIN_NAME } from "../settings";
 import { inspect } from "util";
 import { DebouncedPromise } from "../helpers/DebouncedPromise";
-import { ErrorCallback, RatelimitError } from "../errors";
+import { ErrorCallback, RateLimitError } from "../errors";
 import { GeneralCharacteristic } from "./characteristics";
 import {
   DeviceState,
@@ -25,26 +25,24 @@ import {
 import { Cache } from "../helpers/cache";
 import { TuyaDeviceDefaults } from "../config";
 import { DeviceOfflineError } from "../errors/DeviceOfflineError";
+import { TuyaBoolean } from "../helpers/TuyaBoolean";
 
-export type CharacteristicConstructor = WithUUID<{
-  new (): Characteristic;
-}>;
+export type CharacteristicConstructor = WithUUID<new () => Characteristic>;
 
 type UpdateCallback = (
   data?: DeviceState,
-  callback?: CharacteristicGetCallback
+  callback?: CharacteristicGetCallback,
 ) => void;
 
 export abstract class BaseAccessory {
   public readonly log: Logger;
-  private readonly cache = new Cache();
   private readonly serviceType: WithUUID<typeof Service>;
   public readonly service?: Service;
   public readonly deviceId: string;
-  private updateCallbackList: Map<
+  private updateCallbackList = new Map<
     CharacteristicConstructor,
     Nullable<UpdateCallback>
-  > = new Map();
+  >();
 
   /**
    * The characteristics that this device-type could theoretically support.
@@ -65,11 +63,12 @@ export abstract class BaseAccessory {
       .filter((asc) => asc.isSupportedByAccessory(this));
   }
 
+  public readonly homebridgeAccessory: HomebridgeAccessory;
   constructor(
     public readonly platform: TuyaWebPlatform,
-    public readonly homebridgeAccessory: HomebridgeAccessory,
+    homebridgeAccessory: HomebridgeAccessory | undefined,
     public readonly deviceConfig: TuyaDevice,
-    private readonly categoryType: Categories
+    private readonly categoryType: Categories,
   ) {
     this.log = platform.log;
     this.deviceId = deviceConfig.id;
@@ -77,11 +76,11 @@ export abstract class BaseAccessory {
     this.log.debug(
       "[%s] deviceConfig: %s",
       this.deviceConfig.name,
-      inspect(this.deviceConfig)
+      inspect(this.deviceConfig),
     );
 
     this.validateConfigOverwrites(this.deviceConfig.config).forEach((error) =>
-      this.error(error)
+      this.error(error),
     );
 
     switch (categoryType) {
@@ -106,6 +105,9 @@ export abstract class BaseAccessory {
       case Categories.THERMOSTAT:
         this.serviceType = platform.Service.Thermostat;
         break;
+      case Categories.WINDOW:
+        this.serviceType = platform.Service.Window;
+        break;
       case Categories.WINDOW_COVERING:
         this.serviceType = platform.Service.WindowCovering;
         break;
@@ -114,51 +116,73 @@ export abstract class BaseAccessory {
     }
 
     // Retrieve existing of create new Bridged Accessory
-    if (this.homebridgeAccessory) {
-      this.homebridgeAccessory.controller = this;
-      if (!this.homebridgeAccessory.context.deviceId) {
-        this.homebridgeAccessory.context.deviceId = this.deviceConfig.id;
+    if (homebridgeAccessory) {
+      homebridgeAccessory.controller = this;
+      if (!homebridgeAccessory.context.deviceId) {
+        homebridgeAccessory.context.deviceId = this.deviceConfig.id;
       }
       this.log.info(
         "Existing Accessory found [Name: %s] [Tuya ID: %s] [HomeBridge ID: %s]",
-        this.homebridgeAccessory.displayName,
-        this.homebridgeAccessory.context.deviceId,
-        this.homebridgeAccessory.UUID
+        homebridgeAccessory.displayName,
+        homebridgeAccessory.context.deviceId,
+        homebridgeAccessory.UUID,
       );
-      this.homebridgeAccessory.displayName = this.deviceConfig.name;
+      homebridgeAccessory.displayName = this.deviceConfig.name;
     } else {
-      this.homebridgeAccessory = new this.platform.platformAccessory(
+      homebridgeAccessory = new this.platform.platformAccessory(
         this.deviceConfig.name,
         this.platform.generateUUID(this.deviceConfig.id),
-        categoryType
+        categoryType,
       );
-      this.homebridgeAccessory.context.deviceId = this.deviceConfig.id;
-      this.homebridgeAccessory.controller = this;
+      homebridgeAccessory.context.deviceId = this.deviceConfig.id;
+      homebridgeAccessory.controller = this;
       this.log.info(
         "Created new Accessory [Name: %s] [Tuya ID: %s] [HomeBridge ID: %s]",
-        this.homebridgeAccessory.displayName,
-        this.homebridgeAccessory.context.deviceId,
-        this.homebridgeAccessory.UUID
+        homebridgeAccessory.displayName,
+        homebridgeAccessory.context.deviceId,
+        homebridgeAccessory.UUID,
       );
-      this.platform.registerPlatformAccessory(this.homebridgeAccessory);
+      this.platform.registerPlatformAccessory(homebridgeAccessory);
+    }
+
+    if (!homebridgeAccessory.context.cache) {
+      homebridgeAccessory.context.cache = new Cache();
+    } else if (
+      homebridgeAccessory.context.cache.constructor.name === "Object"
+    ) {
+      homebridgeAccessory.context.cache = Object.assign(
+        new Cache(),
+        homebridgeAccessory.context.cache,
+      );
     }
 
     // Create service
-    this.service = this.homebridgeAccessory.getService(this.serviceType);
+    this.service = homebridgeAccessory.getService(this.serviceType);
     if (!this.service) {
       this.log.debug("Creating New Service %s", this.deviceConfig.id);
-      this.service = this.homebridgeAccessory.addService(
+      this.service = homebridgeAccessory.addService(
         this.serviceType,
-        this.deviceConfig.name
+        this.deviceConfig.name,
       );
     }
 
-    this.homebridgeAccessory.on("identify", this.onIdentify.bind(this));
+    homebridgeAccessory.on("identify", this.onIdentify.bind(this));
+
+    this.homebridgeAccessory = homebridgeAccessory;
 
     this.initializeCharacteristics();
     this.cleanupServices();
   }
 
+  private get cache(): Cache {
+    const cache = this.homebridgeAccessory.context.cache;
+    if (!cache) {
+      throw new Error("Device cache not initialized");
+    }
+    return cache;
+  }
+
+  /**
   private get defaultCharacteristics(): CharacteristicConstructor[] {
     return [
       this.platform.Characteristic.Manufacturer,
@@ -167,6 +191,7 @@ export abstract class BaseAccessory {
       this.platform.Characteristic.SerialNumber,
     ];
   }
+  */
 
   private initializeCharacteristics(): void {
     const deviceSupportedCharacteristics = [
@@ -176,7 +201,7 @@ export abstract class BaseAccessory {
     deviceSupportedCharacteristics.forEach((gc) => new gc(this));
 
     const homekitCharacteristics = deviceSupportedCharacteristics.map(
-      (gc) => gc.HomekitCharacteristic(this).UUID
+      (gc) => gc.HomekitCharacteristic(this).UUID,
     );
 
     this.service?.characteristics?.forEach((char) => {
@@ -199,13 +224,13 @@ export abstract class BaseAccessory {
         this.info(
           `Removing superfluous service: ${
             service.displayName
-          } (${service.characteristics.map((c) => c.displayName)})`
+          } (${service.characteristics.map((c) => c.displayName).join(", ")})`,
         );
         outdatedServices.push(service);
       }
     });
     outdatedServices.forEach((service) =>
-      this.homebridgeAccessory.removeService(service)
+      this.homebridgeAccessory.removeService(service),
     );
   }
 
@@ -217,7 +242,7 @@ export abstract class BaseAccessory {
   public validateConfigOverwrites(
     // Must be determined for overwrites down the line.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    config?: Partial<TuyaDeviceDefaults>
+    config?: Partial<TuyaDeviceDefaults>,
   ): string[] {
     return [];
   }
@@ -228,7 +253,7 @@ export abstract class BaseAccessory {
 
   public setTuyaCharacteristic(
     characteristic: CharacteristicConstructor,
-    data: DeviceState
+    data: DeviceState,
   ): void {
     if (this.updateCallbackList.has(characteristic)) {
       const updateCallback = this.updateCallbackList.get(characteristic);
@@ -239,7 +264,7 @@ export abstract class BaseAccessory {
   public setCharacteristic(
     characteristic: CharacteristicConstructor,
     value: Nullable<CharacteristicValue>,
-    updateHomekit = false
+    updateHomekit = false,
   ) {
     updateHomekit &&
       this.service?.getCharacteristic(characteristic).updateValue(value);
@@ -254,9 +279,9 @@ export abstract class BaseAccessory {
   }
 
   private debouncedDeviceStateRequest = debounce(
-    this.resolveDeviceStateRequest,
+    this.resolveDeviceStateRequest.bind(this),
     500,
-    { maxWait: 1500 }
+    { maxWait: 1500 },
   );
 
   private debouncedDeviceStateRequestPromise?: DebouncedPromise<DeviceState>;
@@ -274,8 +299,8 @@ export abstract class BaseAccessory {
     if (cached !== null) {
       this.debug("Resolving resolveDeviceStateRequest from cache");
 
-      if (String(cached.online).toLowerCase() === "false") {
-        promise.reject(new DeviceOfflineError());
+      if (!TuyaBoolean(cached.online)) {
+        return promise.reject(new DeviceOfflineError());
       }
 
       return promise.resolve(cached);
@@ -287,18 +312,18 @@ export abstract class BaseAccessory {
       this.debug("Set device state request cache");
       this.cache.set(data);
 
-      if (String(data.online).toLowerCase() === "false") {
-        promise.reject(new DeviceOfflineError());
+      if (!TuyaBoolean(data.online)) {
+        return promise.reject(new DeviceOfflineError());
       }
 
-      promise.resolve(data);
+      return promise.resolve(data);
     } catch (error) {
-      if (error instanceof RatelimitError) {
+      if (error instanceof RateLimitError) {
         this.debug("Renewing cache due to RateLimitError");
         const data = this.cache.get(true);
 
-        if (String(data?.online).toLowerCase() === "false") {
-          promise.reject(new DeviceOfflineError());
+        if (!TuyaBoolean(data?.online)) {
+          return promise.reject(new DeviceOfflineError());
         }
 
         if (data) {
@@ -306,7 +331,12 @@ export abstract class BaseAccessory {
           return promise.resolve(data);
         }
       }
-      promise.reject(error);
+
+      if (error instanceof Error) {
+        return promise.reject(error);
+      } else {
+        return promise.reject(new Error(JSON.stringify(error)));
+      }
     }
   }
 
@@ -318,27 +348,40 @@ export abstract class BaseAccessory {
     }
 
     this.debug("Triggering debouncedDeviceStateRequest");
-    this.debouncedDeviceStateRequest();
+    // Awaiting this promise is the responsibility of the caller.
+    void this.debouncedDeviceStateRequest();
 
     return this.debouncedDeviceStateRequestPromise.promise;
   }
 
-  public async setDeviceState<Method extends TuyaApiMethod, T>(
+  /**
+   * Caches the remote state
+   * @param method
+   * @param payload
+   * @param cache tuya value to store in the cache
+   */
+  public async setDeviceState<
+    Method extends TuyaApiMethod,
+    State extends DeviceState,
+  >(
     method: Method,
     payload: TuyaApiPayload<Method>,
-    cache: T
+    cache: State,
   ): Promise<void> {
     this.cache.merge(cache);
 
     return this.platform.tuyaWebApi.setDeviceState(
       this.deviceId,
       method,
-      payload
+      payload,
     );
   }
 
   public updateAccessory(device: TuyaDevice) {
-    const setCharacteristic = (characteristic, value): void => {
+    const setCharacteristic = (
+      characteristic: CharacteristicConstructor,
+      value: CharacteristicValue,
+    ): void => {
       const char =
         accessoryInformationService.getCharacteristic(characteristic) ||
         accessoryInformationService.addCharacteristic(characteristic);
@@ -351,16 +394,16 @@ export abstract class BaseAccessory {
     this.homebridgeAccessory._associatedHAPAccessory.displayName = device.name;
     const accessoryInformationService =
       this.homebridgeAccessory.getService(
-        this.platform.Service.AccessoryInformation
-      ) ||
+        this.platform.Service.AccessoryInformation,
+      ) ??
       this.homebridgeAccessory.addService(
-        this.platform.Service.AccessoryInformation
+        this.platform.Service.AccessoryInformation,
       );
     setCharacteristic(this.platform.Characteristic.Name, device.name);
 
     setCharacteristic(
       this.platform.Characteristic.SerialNumber,
-      this.deviceConfig.id
+      this.deviceConfig.id,
     );
     setCharacteristic(this.platform.Characteristic.Manufacturer, PLUGIN_NAME);
     setCharacteristic(
@@ -368,7 +411,7 @@ export abstract class BaseAccessory {
       device.dev_type
         .split("_")
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(" ")
+        .join(" "),
     );
 
     // Update device specific state
@@ -386,18 +429,18 @@ export abstract class BaseAccessory {
 
   public addUpdateCallback(
     char: CharacteristicConstructor,
-    callback: UpdateCallback
+    callback: UpdateCallback,
   ) {
     this.updateCallbackList.set(char, callback);
   }
 
   public handleError(
     type: "SET" | "GET",
-    callback: ErrorCallback
+    callback: ErrorCallback,
   ): ErrorCallback {
     return (error) => {
       if (error instanceof DeviceOfflineError) {
-        this.error("[%s] %s", type, error.message);
+        this.error("%s", error.message);
       } else {
         this.error("[%s] %s", type, error.message);
       }

@@ -10,22 +10,13 @@ import { BaseAccessory } from "./BaseAccessory";
 import { TuyaDevice } from "../api/response";
 import { HoldPositionCharacteristic } from "./characteristics/holdPosition";
 
-export class CoverAccessory extends BaseAccessory {
-  public target = 0;
-  public position = 0;
-  public motor = 2;
-
+export class WindowAccessory extends BaseAccessory {
   constructor(
     platform: TuyaWebPlatform,
     homebridgeAccessory: HomebridgeAccessory | undefined,
     deviceConfig: TuyaDevice,
   ) {
-    super(
-      platform,
-      homebridgeAccessory,
-      deviceConfig,
-      Categories.WINDOW_COVERING,
-    );
+    super(platform, homebridgeAccessory, deviceConfig, Categories.WINDOW);
   }
 
   public get accessorySupportedCharacteristics(): GeneralCharacteristic[] {

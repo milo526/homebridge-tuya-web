@@ -15,8 +15,8 @@ import { TuyaDevice } from "../api/response";
 export class ClimateAccessory extends BaseAccessory {
   constructor(
     platform: TuyaWebPlatform,
-    homebridgeAccessory: HomebridgeAccessory,
-    deviceConfig: TuyaDevice
+    homebridgeAccessory: HomebridgeAccessory | undefined,
+    deviceConfig: TuyaDevice,
   ) {
     super(platform, homebridgeAccessory, deviceConfig, Categories.THERMOSTAT);
   }
@@ -43,7 +43,7 @@ export class ClimateAccessory extends BaseAccessory {
       const minTemp = Number(config.min_temper);
       if (!minTemp) {
         errors.push(
-          "Wrong value configured for `min_temper`, should be a number"
+          "Wrong value configured for `min_temper`, should be a number",
         );
       } else {
         //Ensure that the min temp is a multiple of 0.5;
@@ -55,7 +55,7 @@ export class ClimateAccessory extends BaseAccessory {
       const maxTemp = Number(config.max_temper);
       if (!maxTemp) {
         errors.push(
-          "Wrong value configured for `max_temper`, should be a number"
+          "Wrong value configured for `max_temper`, should be a number",
         );
       } else {
         //Ensure that the min temp is a multiple of 0.5;
@@ -67,7 +67,7 @@ export class ClimateAccessory extends BaseAccessory {
       const tempFactor = Number(config.target_temperature_factor);
       if (!tempFactor) {
         errors.push(
-          "Wrong value configured for `target_temperature_factor`, should be a number"
+          "Wrong value configured for `target_temperature_factor`, should be a number",
         );
       } else {
         config.target_temperature_factor = tempFactor;
@@ -78,7 +78,7 @@ export class ClimateAccessory extends BaseAccessory {
       const tempFactor = Number(config.current_temperature_factor);
       if (!tempFactor) {
         errors.push(
-          "Wrong value configured for `current_temperature_factor`, should be a number"
+          "Wrong value configured for `current_temperature_factor`, should be a number",
         );
       } else {
         config.current_temperature_factor = tempFactor;
@@ -96,7 +96,7 @@ export class ClimateAccessory extends BaseAccessory {
       config.min_temper >= config.max_temper
     ) {
       errors.push(
-        "The minimum temperature is larger then the maximum temperature"
+        "The minimum temperature is larger then the maximum temperature",
       );
     }
     return errors;

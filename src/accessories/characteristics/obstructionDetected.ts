@@ -23,7 +23,7 @@ export class ObstructionDetectedCharacteristic extends TuyaWebCharacteristic {
     this.accessory.setCharacteristic(
       this.homekitCharacteristic,
       false,
-      !callback
+      !callback,
     );
     callback && callback(null, false);
   }

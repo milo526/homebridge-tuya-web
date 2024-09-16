@@ -7,7 +7,8 @@ import {
 import { TuyaWebCharacteristic } from "./base";
 import { BaseAccessory } from "../BaseAccessory";
 import { ClimateMode } from "./index";
-import { DeviceState } from "../../api/response";
+import { DeviceState, ExtendedBoolean } from "../../api/response";
+import { TuyaBoolean } from "../../helpers/TuyaBoolean";
 
 export class TargetHeatingCoolingStateCharacteristic extends TuyaWebCharacteristic {
   public static Title = "Characteristic.TargetHeatingCoolingState";
@@ -28,7 +29,7 @@ export class TargetHeatingCoolingStateCharacteristic extends TuyaWebCharacterist
     if (this.canSpecifyTarget) {
       validValues.push(
         this.TargetHeatingCoolingState.COOL,
-        this.TargetHeatingCoolingState.HEAT
+        this.TargetHeatingCoolingState.HEAT,
       );
     }
     return char?.setProps({
@@ -61,7 +62,7 @@ export class TargetHeatingCoolingStateCharacteristic extends TuyaWebCharacterist
 
   public setRemoteValue(
     homekitValue: CharacteristicValue,
-    callback: CharacteristicSetCallback
+    callback: CharacteristicSetCallback,
   ): void {
     if (homekitValue === this.TargetHeatingCoolingState.OFF) {
       this.accessory
@@ -74,13 +75,13 @@ export class TargetHeatingCoolingStateCharacteristic extends TuyaWebCharacterist
       return;
     }
 
-    const map: { [key: number]: ClimateMode } = {
+    const map: Record<number, ClimateMode> = {
       [this.TargetHeatingCoolingState.AUTO]: "auto",
       [this.TargetHeatingCoolingState.HEAT]: "hot",
       [this.TargetHeatingCoolingState.COOL]: "cold",
     };
 
-    const value = map[homekitValue as string];
+    const value = map[homekitValue as number];
     this.accessory
       .setDeviceState("turnOnOff", { value: 1 }, { state: true })
       .then(() => {
@@ -100,11 +101,11 @@ export class TargetHeatingCoolingStateCharacteristic extends TuyaWebCharacterist
   }
 
   updateValue(data: DeviceState, callback?: CharacteristicGetCallback): void {
-    if (String(data?.state).toLowerCase() === "false") {
+    if (!TuyaBoolean(data?.state as ExtendedBoolean)) {
       this.accessory.setCharacteristic(
         this.homekitCharacteristic,
         this.TargetHeatingCoolingState.OFF,
-        !callback
+        !callback,
       );
       this.debug("[UPDATE] %s", "OFF");
       callback && callback(null, this.TargetHeatingCoolingState.OFF);
@@ -116,19 +117,19 @@ export class TargetHeatingCoolingStateCharacteristic extends TuyaWebCharacterist
       wind: this.TargetHeatingCoolingState.AUTO,
       hot: this.TargetHeatingCoolingState.HEAT,
       cold: this.TargetHeatingCoolingState.COOL,
-    }[data?.mode || "auto"];
+    }[data?.mode ?? "auto"];
     this.debug(
       "[UPDATE] %s",
       mode === this.TargetHeatingCoolingState.HEAT
         ? "HEAT"
         : mode === this.TargetHeatingCoolingState.COOL
         ? "COOL"
-        : "AUTO"
+        : "AUTO",
     );
     this.accessory.setCharacteristic(
       this.homekitCharacteristic,
       mode,
-      !callback
+      !callback,
     );
     callback && callback(null, mode);
   }
