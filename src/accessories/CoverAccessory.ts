@@ -11,6 +11,10 @@ import { TuyaDevice } from "../api/response";
 import { HoldPositionCharacteristic } from "./characteristics/holdPosition";
 
 export class CoverAccessory extends BaseAccessory {
+  public target = 0;
+  public position = 0;
+  public motor = 2;
+
   constructor(
     platform: TuyaWebPlatform,
     homebridgeAccessory: HomebridgeAccessory | undefined,

@@ -2,6 +2,7 @@ import { CharacteristicGetCallback } from "homebridge";
 import { TuyaWebCharacteristic } from "./base";
 import { BaseAccessory } from "../BaseAccessory";
 import { DeviceState } from "../../api/response";
+import { CoverAccessory } from "..";
 
 export class PositionStateCharacteristic extends TuyaWebCharacteristic {
   public static Title = "Characteristic.PositionState";
@@ -14,21 +15,11 @@ export class PositionStateCharacteristic extends TuyaWebCharacteristic {
     return true;
   }
 
-  private get PositionState() {
-    return this.accessory.platform.Characteristic.PositionState;
-  }
-
   public getRemoteValue(callback: CharacteristicGetCallback): void {
     this.updateValue({}, callback);
   }
 
   updateValue(data: DeviceState, callback?: CharacteristicGetCallback): void {
-    this.debug("Setting position state to stopped");
-    this.accessory.setCharacteristic(
-      this.homekitCharacteristic,
-      this.PositionState.STOPPED,
-      !callback,
-    );
-    callback && callback(null, this.PositionState.STOPPED);
+    callback && callback(null, (<CoverAccessory>this.accessory).motor);
   }
 }
