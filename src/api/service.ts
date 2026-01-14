@@ -23,7 +23,7 @@ import { URLSearchParams } from "url";
 
 export class TuyaWebApi {
   private session: Session | undefined;
-  private authBaseUrl = "https://px1.tuyaeu.com";
+  private authBaseUrl: string;
 
   constructor(
     private username: string,
@@ -31,7 +31,15 @@ export class TuyaWebApi {
     private countryCode: string,
     private tuyaPlatform: TuyaPlatform = "tuya",
     private log?: Logger,
-  ) {}
+  ) {
+    if (countryCode === "1") {
+      this.authBaseUrl = "https://px1.tuyaus.com";
+    } else if (countryCode === "86") {
+      this.authBaseUrl = "https://px1.tuyacn.com";
+    } else {
+      this.authBaseUrl = "https://px1.tuyaeu.com";
+    }
+  }
 
   public async getAllDeviceStates(): Promise<TuyaDevice[] | undefined> {
     return this.discoverDevices();
@@ -165,13 +173,11 @@ export class TuyaWebApi {
         countryCode: this.countryCode,
         bizType: this.tuyaPlatform,
         from: "tuya",
-      }).toString();
-      const contentLength = formData.length;
+      });
 
       data = (
         await axios<Record<string, unknown> & { header: TuyaResponseHeader }>({
           headers: {
-            "Content-Length": `${contentLength}`,
             "Content-Type": "application/x-www-form-urlencoded",
           },
           url: "/homeassistant/auth.do",
