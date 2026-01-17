@@ -9,15 +9,15 @@ import { TuyaDeviceAPI, TuyaDevice, TuyaDeviceStatus } from './api';
  */
 export class TuyaAccessory {
   private service!: Service;
-  private device: TuyaDevice;
+  private get device(): TuyaDevice {
+    return this.accessory.context.device as TuyaDevice;
+  }
 
   constructor(
     private readonly platform: TuyaWebPlatform,
     private readonly accessory: PlatformAccessory,
     private readonly deviceApi: TuyaDeviceAPI,
   ) {
-    this.device = accessory.context.device as TuyaDevice;
-
     // Set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Tuya')
@@ -217,9 +217,11 @@ export class TuyaAccessory {
     for (const code of codes) {
       const value = this.getStatusValue(code);
       if (typeof value === 'boolean') {
+        this.platform.log.debug(`[${this.device.name}] getOn: ${code} is ${value}`);
         return value;
       }
     }
+    this.platform.log.debug(`[${this.device.name}] getOn: no power code found, returning online=${this.device.online}`);
     return this.device.online;
   }
 
