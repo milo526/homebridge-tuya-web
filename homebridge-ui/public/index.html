@@ -53,8 +53,8 @@
     <!-- Header -->
     <div class="row mb-4">
       <div class="col-12 text-center">
-        <h4><img src="https://raw.githubusercontent.com/homebridge/homebridge/master/brand/logo-big.png" height="30"
-            class="mr-2"> Tuya Configuration</h4>
+        <h4><img src="https://avatars.githubusercontent.com/u/73523937?s=280&v=4" height="30" class="mr-2"> Tuya
+          Configuration</h4>
       </div>
     </div>
 
@@ -97,11 +97,11 @@
     <!-- View: Start Linking -->
     <div id="start-view" class="card hidden">
       <div class="card-header">
-        <h5 class="mb-0">Link Tuya Account</h5>
+        <h5 class="mb-0">Link Account</h5>
       </div>
       <div class="card-body">
         <div class="alert alert-info">
-          Link your Tuya Smart or Smart Life account by scanning a QR code. No developer account needed.
+          Link your Tuya Smart or Smart Life account by scanning a QR code.
         </div>
 
         <form onsubmit="event.preventDefault(); startLinking();">
@@ -118,9 +118,11 @@
 
           <div class="form-group">
             <label for="userCode">User Code</label>
-            <input type="text" id="userCode" class="form-control" placeholder="Found in Tuya App Settings" required>
-            <small class="form-text text-muted">
-              Open Tuya App &rarr; <strong>Settings</strong> &rarr; <strong>Account and Security</strong> &rarr;
+            <input type="text" id="userCode" class="form-control" placeholder="Found in Tuya/Smart Life App Settings"
+              required>
+            <small class="form-text">
+              Open Tuya/Smart Life App &rarr; <strong>Settings</strong> &rarr; <strong>Account and Security</strong>
+              &rarr;
               <strong>User Code</strong>
             </small>
           </div>
@@ -151,7 +153,7 @@
 
         <p id="timer" class="text-danger font-weight-bold small"></p>
 
-        <div class="text-left mt-4 px-3">
+        <div class="mt-4 px-3" style="text-align: left;">
           <h6>Instructions:</h6>
           <ol class="pl-3">
             <li>Open <strong>Tuya Smart</strong> or <strong>Smart Life</strong> app.</li>
@@ -303,10 +305,12 @@
 
     // Timer & Expiry
     function updateTimer() {
+      if (!expiresAt) return;
+
       const remaining = Math.ceil((expiresAt - Date.now()) / 1000);
       const timerEl = document.getElementById('timer');
 
-      if (remaining <= 0) {
+      if (isNaN(remaining) || remaining <= 0) {
         handleExpiry();
         return;
       }
