@@ -16,9 +16,20 @@ export { TuyaMobileAPI } from './TuyaMobileAPI';
 
 export { TuyaDeviceAPI, DEVICE_CATEGORIES } from './TuyaDeviceAPI';
 export type { 
-  TuyaDevice, 
+  TuyaDevice as TuyaDeviceNew, 
   TuyaDeviceStatus, 
   TuyaDeviceCommand, 
   DeviceCategory, 
   AccessoryType,
 } from './TuyaDeviceAPI';
+
+// Old-style API and types for accessory compatibility
+export { TuyaWebApi } from './TuyaWebApi';
+export type {
+  TuyaDevice,
+  DeviceState,
+  TuyaApiMethod,
+  TuyaApiPayload,
+  ExtendedBoolean,
+} from './response';
+export { statusArrayToDeviceState, convertNewDeviceToOld } from './response';

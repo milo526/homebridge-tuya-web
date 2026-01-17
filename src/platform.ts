@@ -8,17 +8,46 @@ import type {
   Service,
 } from 'homebridge';
 
-import { TuyaAccessory } from './platformAccessory';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { 
   TuyaOpenAPI, 
   TuyaMobileAPI,
   TuyaLinkingAuth, 
   TuyaDeviceAPI, 
-  TuyaDevice, 
+  TuyaWebApi,
+  TuyaDevice,
   TuyaTokens,
   TuyaRegion,
+  convertNewDeviceToOld,
 } from './api';
+import {
+  BaseAccessory,
+  LightAccessory,
+  SwitchAccessory,
+  OutletAccessory,
+  FanAccessory,
+  CoverAccessory,
+  ClimateAccessory,
+  SceneAccessory,
+  DimmerAccessory,
+  GarageDoorAccessory,
+  WindowAccessory,
+  TemperatureSensorAccessory,
+} from './accessories';
+
+/**
+ * HomebridgeAccessory type used by the old accessory system
+ */
+export interface HomebridgeAccessory extends PlatformAccessory {
+  controller?: BaseAccessory;
+  context: {
+    deviceId?: string;
+    cache?: unknown;
+  };
+  // Internal HAP accessor for display name updates
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _associatedHAPAccessory: any;
+}
 
 export interface TuyaWebConfig extends PlatformConfig {
   region?: TuyaRegion;
@@ -26,6 +55,13 @@ export interface TuyaWebConfig extends PlatformConfig {
   pollingInterval?: number;
   hiddenAccessories?: string[];
   debug?: boolean;
+  // Device-specific configuration overrides
+  devices?: Array<{
+    id?: string;
+    name?: string;
+    device_type?: string;
+    [key: string]: unknown;
+  }>;
 }
 
 /**
@@ -38,14 +74,20 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
   public readonly Characteristic: typeof Characteristic;
 
   // Track restored cached accessories
-  public readonly accessories: Map<string, PlatformAccessory> = new Map();
+  public readonly accessories: Map<string, HomebridgeAccessory> = new Map();
   public readonly discoveredCacheUUIDs: string[] = [];
 
   // Tuya API instances
-  private api!: TuyaOpenAPI;
+  private openApi!: TuyaOpenAPI;
   private mobileApi!: TuyaMobileAPI;
   private deviceApi!: TuyaDeviceAPI;
   private linkingAuth!: TuyaLinkingAuth;
+  
+  // Old-style API wrapper for accessories
+  public tuyaWebApi!: TuyaWebApi;
+
+  // Platform accessory constructor
+  public readonly platformAccessory: typeof PlatformAccessory;
 
   // Polling timer
   private pollingTimer?: NodeJS.Timeout;
@@ -57,6 +99,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
   ) {
     this.Service = hbApi.hap.Service;
     this.Characteristic = hbApi.hap.Characteristic;
+    this.platformAccessory = hbApi.platformAccessory as unknown as typeof PlatformAccessory;
 
     this.log.debug('Initializing Tuya platform...');
 
@@ -82,7 +125,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     const region = this.config.region || 'US';
 
     // Create API instances - no credentials needed!
-    this.api = new TuyaOpenAPI(region, this.log);
+    this.openApi = new TuyaOpenAPI(region, this.log);
     const endpoints: Record<TuyaRegion, string> = {
       US: 'https://openapi.tuyaus.com',
       EU: 'https://openapi.tuyaeu.com',
@@ -92,13 +135,16 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     const baseUrl = endpoints[region] || endpoints.US;
     
     this.mobileApi = new TuyaMobileAPI(baseUrl, this.log);
-    this.deviceApi = new TuyaDeviceAPI(this.api, this.mobileApi, this.log);
+    this.deviceApi = new TuyaDeviceAPI(this.openApi, this.mobileApi, this.log);
     this.linkingAuth = new TuyaLinkingAuth(region, this.log);
+    
+    // Create old-style API wrapper for accessories
+    this.tuyaWebApi = new TuyaWebApi(this.deviceApi, this.log);
 
     // Restore tokens if available
     if (this.config.tokens?.accessToken) {
       this.log.debug('Restoring saved tokens');
-      this.api.setTokens(this.config.tokens);
+      this.openApi.setTokens(this.config.tokens);
       this.mobileApi.setTokens(this.config.tokens);
     }
   }
@@ -107,7 +153,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
    * Get API instances for custom UI
    */
   public getApi(): TuyaOpenAPI {
-    return this.api;
+    return this.openApi;
   }
 
   public getLinkingAuth(): TuyaLinkingAuth {
@@ -115,11 +161,27 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
   }
 
   /**
+   * Generate a UUID from a device ID
+   */
+  public generateUUID(deviceId: string): string {
+    return this.hbApi.hap.uuid.generate(deviceId);
+  }
+
+  /**
+   * Register a new platform accessory
+   */
+  public registerPlatformAccessory(accessory: HomebridgeAccessory): void {
+    this.log.debug('Registering new accessory:', accessory.displayName);
+    this.hbApi.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory as PlatformAccessory]);
+    this.accessories.set(accessory.UUID, accessory);
+  }
+
+  /**
    * This function is invoked when homebridge restores cached accessories from disk at startup.
    */
   configureAccessory(accessory: PlatformAccessory): void {
     this.log.info('Loading accessory from cache:', accessory.displayName);
-    this.accessories.set(accessory.UUID, accessory);
+    this.accessories.set(accessory.UUID, accessory as HomebridgeAccessory);
   }
 
   /**
@@ -127,7 +189,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
    */
   async discoverDevices(): Promise<void> {
     // Check if we have valid tokens
-    if (!this.api.hasValidTokens()) {
+    if (!this.openApi.hasValidTokens()) {
       this.log.warn('╔════════════════════════════════════════════════════════════════╗');
       this.log.warn('║                   TUYA ACCOUNT NOT LINKED                      ║');
       this.log.warn('╠════════════════════════════════════════════════════════════════╣');
@@ -142,7 +204,9 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
 
     try {
       this.log.info('Discovering Tuya devices...');
-      const devices = await this.deviceApi.getDeviceList();
+      
+      // Get devices in old format via tuyaWebApi
+      const devices = await this.tuyaWebApi.getAllDevices();
       
       this.log.info(`Found ${devices.length} device(s)`);
 
@@ -153,26 +217,28 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
           continue;
         }
 
+        // Apply device-specific config overrides
+        const configOverride = this.getDeviceConfig(device.id, device.name);
+        if (configOverride) {
+          device.config = { ...device.config, ...configOverride };
+          // Override device type if specified
+          if (configOverride.device_type && typeof configOverride.device_type === 'string') {
+            device.dev_type = configOverride.device_type;
+          }
+        }
+
         // Generate UUID from device ID
-        const uuid = this.hbApi.hap.uuid.generate(device.id);
+        const uuid = this.generateUUID(device.id);
         this.discoveredCacheUUIDs.push(uuid);
 
         // Check if accessory already exists
         const existingAccessory = this.accessories.get(uuid);
 
-        if (existingAccessory) {
-          // Update existing accessory
-          this.log.info('Restoring existing accessory:', device.name);
-          existingAccessory.context.device = device;
-          new TuyaAccessory(this, existingAccessory, this.deviceApi);
-        } else {
-          // Create new accessory
-          this.log.info('Adding new accessory:', device.name);
-          const accessory = new this.hbApi.platformAccessory(device.name, uuid);
-          accessory.context.device = device;
-          new TuyaAccessory(this, accessory, this.deviceApi);
-          this.hbApi.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-          this.accessories.set(uuid, accessory);
+        try {
+          // Create the appropriate accessory type
+          this.createAccessory(device, existingAccessory);
+        } catch (error) {
+          this.log.error(`Failed to create accessory for ${device.name}:`, error);
         }
       }
 
@@ -180,7 +246,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
       for (const [uuid, accessory] of this.accessories) {
         if (!this.discoveredCacheUUIDs.includes(uuid)) {
           this.log.info('Removing accessory no longer present:', accessory.displayName);
-          this.hbApi.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+          this.hbApi.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory as PlatformAccessory]);
           this.accessories.delete(uuid);
         }
       }
@@ -190,6 +256,94 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
 
     } catch (error) {
       this.log.error('Failed to discover devices:', error);
+    }
+  }
+
+  /**
+   * Get device-specific configuration from config
+   */
+  private getDeviceConfig(deviceId: string, deviceName: string): Record<string, unknown> | undefined {
+    if (!this.config.devices) {
+      return undefined;
+    }
+
+    return this.config.devices.find(
+      d => d.id === deviceId || d.name === deviceName,
+    );
+  }
+
+  /**
+   * Create the appropriate accessory type based on device type
+   */
+  private createAccessory(device: TuyaDevice, existingAccessory?: HomebridgeAccessory): void {
+    const devType = device.dev_type || device.ha_type || 'switch';
+    
+    this.log.debug(`Creating accessory for ${device.name} (type: ${devType})`);
+
+    // Map device type to accessory class
+    switch (devType) {
+      case 'light':
+      case 'dj':
+      case 'dd':
+      case 'fwd':
+      case 'dc':
+      case 'xdd':
+      case 'fsd':
+        new LightAccessory(this, existingAccessory, device);
+        break;
+
+      case 'dimmer':
+        new DimmerAccessory(this, existingAccessory, device);
+        break;
+
+      case 'outlet':
+      case 'cz':
+      case 'pc':
+        new OutletAccessory(this, existingAccessory, device);
+        break;
+
+      case 'fan':
+      case 'fs':
+      case 'fskg':
+        new FanAccessory(this, existingAccessory, device);
+        break;
+
+      case 'cover':
+      case 'cl':
+      case 'clkg':
+        new CoverAccessory(this, existingAccessory, device);
+        break;
+
+      case 'garage':
+      case 'ckmkzq':
+        new GarageDoorAccessory(this, existingAccessory, device);
+        break;
+
+      case 'window':
+        new WindowAccessory(this, existingAccessory, device);
+        break;
+
+      case 'climate':
+      case 'kt':
+      case 'wk':
+      case 'rs':
+        new ClimateAccessory(this, existingAccessory, device);
+        break;
+
+      case 'scene':
+        new SceneAccessory(this, existingAccessory, device);
+        break;
+
+      case 'temperature_sensor':
+      case 'wsdcg':
+        new TemperatureSensorAccessory(this, existingAccessory, device);
+        break;
+
+      case 'switch':
+      case 'kg':
+      default:
+        new SwitchAccessory(this, existingAccessory, device);
+        break;
     }
   }
 
@@ -219,15 +373,16 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
 
     this.pollingTimer = setInterval(async () => {
       try {
-        const devices = await this.deviceApi.getDeviceList();
+        const devices = await this.tuyaWebApi.getAllDevices();
         
         for (const device of devices) {
-          const uuid = this.hbApi.hap.uuid.generate(device.id);
+          const uuid = this.generateUUID(device.id);
           const accessory = this.accessories.get(uuid);
           
-          if (accessory) {
-            accessory.context.device = device;
-            this.hbApi.updatePlatformAccessories([accessory]);
+          if (accessory?.controller) {
+            this.log.debug(`Updating status for ${device.name}`);
+            accessory.controller.updateAccessory(device);
+            this.hbApi.updatePlatformAccessories([accessory as PlatformAccessory]);
           }
         }
       } catch (error) {
@@ -243,7 +398,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     if (this.pollingTimer) {
       clearInterval(this.pollingTimer);
     }
-    this.api?.destroy();
+    this.openApi?.destroy();
     this.linkingAuth?.destroy();
   }
 }
