@@ -5,7 +5,7 @@
  * Uses embedded Tuya credentials - no user configuration needed.
  */
 
-const { HomebridgePluginUiServer } = require('@homebridge/plugin-ui-utils');
+const HomebridgePluginUiServer = require('@homebridge/plugin-ui-utils');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
 const axios = require('axios');
