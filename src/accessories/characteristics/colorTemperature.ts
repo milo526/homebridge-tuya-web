@@ -93,7 +93,7 @@ export class ColorTemperatureCharacteristic extends TuyaWebCharacteristic {
   updateValue(data: DeviceState, callback?: CharacteristicGetCallback): void {
     if (data?.color_temp !== undefined) {
       const tuyaValue = data.color_temp;
-      const homekitColorTemp = Math.round(
+      let homekitColorTemp = Math.round(
         this.rangeMapper.tuyaToHomekit(Number(data.color_temp)),
       );
 
@@ -105,6 +105,8 @@ export class ColorTemperatureCharacteristic extends TuyaWebCharacteristic {
           tuyaValue,
           this.rangeMapper.tuyaStart,
         );
+        // Clamp to valid range
+        homekitColorTemp = this.maxHomekit;
       } else if (homekitColorTemp < this.minHomekit) {
         this.warn(
           "Characteristic 'ColorTemperature' will receive value lower than allowed mired (%s) since provided Tuya kelvin value (%s) " +
@@ -113,7 +115,12 @@ export class ColorTemperatureCharacteristic extends TuyaWebCharacteristic {
           tuyaValue,
           this.rangeMapper.tuyaEnd,
         );
+        // Clamp to valid range
+        homekitColorTemp = this.minHomekit;
       }
+
+      // Ensure value is a valid integer within HomeKit's acceptable range (140-500 mireds)
+      homekitColorTemp = Math.max(140, Math.min(500, Math.round(homekitColorTemp)));
 
       this.accessory.setCharacteristic(
         this.homekitCharacteristic,

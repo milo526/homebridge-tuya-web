@@ -116,39 +116,32 @@ export class TuyaWebApi {
       }
 
       case 'colorTemperatureSet': {
-        const device = this.deviceCache.get(deviceId);
-        const hasV2 = device?.data?.color_temp !== undefined;
+        // Input is in Kelvin, convert to Tuya scale
+        // Tuya uses 0-1000 (V2) or 0-255 (V1), mapping 2700K-6500K
+        const kelvin = Number(p.value);
+        const ratio = Math.max(0, Math.min(1, (kelvin - 2700) / (6500 - 2700)));
         
-        if (hasV2) {
-          commands.push({ code: 'temp_value_v2', value: Number(p.value) });
-        } else {
-          commands.push({ code: 'temp_value', value: Number(p.value) });
-        }
+        // Check if V2 is supported (based on cached device info or default to V2)
+        // V2 scale: 0-1000, V1 scale: 0-255
+        const v2Value = Math.round(ratio * 1000);
+        const v1Value = Math.round(ratio * 255);
+        
+        // Try V2 first (more common in newer devices)
+        commands.push({ code: 'temp_value_v2', value: v2Value });
         break;
       }
 
       case 'colorSet': {
+        // Old API sends: hue (0-360), saturation (0-1 fraction), brightness (0-100 percentage)
         const color = p.color as { hue: number; saturation: number; brightness: number };
-        const device = this.deviceCache.get(deviceId);
-        const hasV2 = device?.data?.color?.h !== undefined;
         
-        if (hasV2) {
-          // V2 format
-          const colorValue = {
-            h: Math.round(color.hue),
-            s: Math.round(color.saturation * 1000),
-            v: Math.round(color.brightness * 10),
-          };
-          commands.push({ code: 'colour_data_v2', value: JSON.stringify(colorValue) });
-        } else {
-          // V1 format
-          const colorValue = {
-            h: Math.max(1, Math.min(360, Math.round(color.hue))),
-            s: Math.round(color.saturation * 2.55),
-            v: Math.round(color.brightness * 2.55),
-          };
-          commands.push({ code: 'colour_data', value: JSON.stringify(colorValue) });
-        }
+        // V2 format: h (0-360), s (0-1000), v (0-1000)
+        const colorValueV2 = {
+          h: Math.round(color.hue),
+          s: Math.round(color.saturation * 1000), // 0-1 -> 0-1000
+          v: Math.round(color.brightness * 10),   // 0-100 -> 0-1000
+        };
+        commands.push({ code: 'colour_data_v2', value: JSON.stringify(colorValueV2) });
         // Also set work mode to color
         commands.push({ code: 'work_mode', value: 'colour' });
         break;

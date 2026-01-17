@@ -186,26 +186,55 @@ export function statusArrayToDeviceState(status: TuyaDeviceStatus[], online?: bo
         state.brightness = Math.round(((s.value as number) / 255) * 100);
         break;
 
-      // Color temperature
-      case 'temp_value_v2':
-      case 'temp_value':
-        state.color_temp = s.value as number;
+      // Color temperature - convert to Kelvin
+      // V2: 0-1000, V1: 0-255, both map to 2700K-6500K range
+      case 'temp_value_v2': {
+        const ratio = (s.value as number) / 1000;
+        state.color_temp = Math.round(2700 + ratio * (6500 - 2700));
         break;
+      }
+      case 'temp_value': {
+        const ratio = (s.value as number) / 255;
+        state.color_temp = Math.round(2700 + ratio * (6500 - 2700));
+        break;
+      }
 
       // Color mode
       case 'work_mode':
         state.color_mode = s.value as string;
         break;
 
-      // Color data
+      // Color data V2 - h: 0-360, s: 0-1000, v: 0-1000
       case 'colour_data_v2':
+        try {
+          const colorData = typeof s.value === 'string' ? JSON.parse(s.value) : s.value;
+          const h = colorData.h ?? colorData.hue ?? 0;
+          const sRaw = colorData.s ?? colorData.saturation ?? 0;
+          const vRaw = colorData.v ?? colorData.brightness ?? 1000;
+          // Convert from 0-1000 scale to 0-100 scale
+          state.color = {
+            hue: String(h),
+            saturation: String(Math.round(sRaw / 10)),
+            brightness: String(Math.round(vRaw / 10)),
+          };
+          state.color_mode = 'colour';
+        } catch {
+          // Ignore parsing errors
+        }
+        break;
+
+      // Color data V1 - h: 0-360, s: 0-255, v: 0-255
       case 'colour_data':
         try {
           const colorData = typeof s.value === 'string' ? JSON.parse(s.value) : s.value;
+          const h = colorData.h ?? colorData.hue ?? 0;
+          const sRaw = colorData.s ?? colorData.saturation ?? 0;
+          const vRaw = colorData.v ?? colorData.brightness ?? 255;
+          // Convert from 0-255 scale to 0-100 scale
           state.color = {
-            hue: String(colorData.h ?? colorData.hue ?? 0),
-            saturation: String(colorData.s ?? colorData.saturation ?? 0),
-            brightness: String(colorData.v ?? colorData.brightness ?? 100),
+            hue: String(h),
+            saturation: String(Math.round((sRaw / 255) * 100)),
+            brightness: String(Math.round((vRaw / 255) * 100)),
           };
           state.color_mode = 'colour';
         } catch {
