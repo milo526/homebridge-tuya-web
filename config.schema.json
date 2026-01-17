@@ -2,416 +2,104 @@
   "pluginAlias": "TuyaWebPlatform",
   "pluginType": "platform",
   "singular": true,
-  "headerDisplay": "Homebridge plugin for devices using the Tuya Web API.",
-  "footerDisplay": "If you have any suggestions, please open an issue on [GitHub](https://github.com/milo526/homebridge-tuya-web/issues).",
+  "strictValidation": false,
+  "customUi": true,
   "schema": {
     "type": "object",
+    "required": [
+      "name",
+      "region"
+    ],
     "properties": {
       "name": {
         "title": "Name",
         "type": "string",
-        "required": true,
-        "default": "TuyaWebPlatform",
-        "description": "You shouldn't need to change this."
+        "default": "Tuya"
       },
-      "options": {
-        "title": "",
+      "region": {
+        "title": "Region",
+        "type": "string",
+        "enum": [
+          "US",
+          "EU",
+          "CN",
+          "IN"
+        ],
+        "default": "US",
+        "description": "Select the region closest to you. This determines which Tuya data center to use."
+      },
+      "accessId": {
+        "title": "Access ID",
+        "type": "string",
+        "description": "Your Tuya IoT Platform Access ID (optional, for advanced users)"
+      },
+      "accessSecret": {
+        "title": "Access Secret",
+        "type": "string",
+        "description": "Your Tuya IoT Platform Access Secret (optional, for advanced users)"
+      },
+      "tokens": {
         "type": "object",
-        "required": true,
         "properties": {
-          "username": {
-            "title": "Username",
-            "type": "string",
-            "required": true
+          "accessToken": {
+            "type": "string"
           },
-          "password": {
-            "title": "Password",
-            "type": "string",
-            "required": true
+          "refreshToken": {
+            "type": "string"
           },
-          "countryCode": {
-            "title": "Country Code",
-            "type": "string",
-            "description": "Your account country code, e.g. 1 for USA, 86 for China, 44 for UK.",
-            "required": true
+          "expiresIn": {
+            "type": "number"
           },
-          "platform": {
-            "title": "Platform",
-            "type": "string",
-            "default": "form",
-            "oneOf": [
-              {
-                "title": "Tuya Smart",
-                "enum": ["tuya"]
-              },
-              {
-                "title": "Smart Life",
-                "enum": ["smart_life"]
-              },
-              {
-                "title": "Jinvoo Smart",
-                "enum": ["jinvoo_smart"]
-              }
-            ],
-            "required": true
+          "expiresAt": {
+            "type": "number"
           },
-          "pollingInterval": {
-            "title": "Polling Interval",
-            "type": "number",
-            "description": "The frequency in seconds that the plugin polls the cloud to get device updates. Can be left empty to only fetch on request. Must be 600 or larger",
-            "required": false,
-            "minimum": 600
+          "uid": {
+            "type": "string"
           }
         }
       },
-      "defaults": {
-        "title": "Device Settings",
-        "description": "Here you can configure settings for each of your devices.",
-        "type": "array",
-        "items": {
-          "title": "Overwrite",
-          "type": "object",
-          "properties": {
-            "id": {
-              "title": "Device name or id",
-              "type": "string",
-              "description": "Can be found in your platform app (device info -> virtual ID) and is exposed during plugin boot (use the Tuya ID)",
-              "required": true
-            },
-            "device_type": {
-              "title": "Device type",
-              "type": "string",
-              "default": "form",
-              "description": "The type that you want the device to be exposed as",
-              "oneOf": [
-                {
-                  "title": "Dimmer",
-                  "enum": ["dimmer"]
-                },
-                {
-                  "title": "Fan",
-                  "enum": ["fan"]
-                },
-                {
-                  "title": "Garage Door",
-                  "enum": ["garage"]
-                },
-                {
-                  "title": "Light",
-                  "enum": ["light"]
-                },
-                {
-                  "title": "Outlet",
-                  "enum": ["outlet"]
-                },
-                {
-                  "title": "Scene",
-                  "enum": ["scene"]
-                },
-                {
-                  "title": "Switch",
-                  "enum": ["switch"]
-                },
-                {
-                  "title": "Temperature Sensor",
-                  "enum": ["temperature_sensor"]
-                },
-                {
-                  "title": "Thermostat",
-                  "enum": ["climate"]
-                },
-                {
-                  "title": "Window Cover",
-                  "enum": ["cover"]
-                },
-                {
-                  "title": "Window",
-                  "enum": ["window"]
-                }
-              ],
-              "required": true
-            },
-            "min_temper": {
-              "title": "Minimal Temperature",
-              "type": "string",
-              "pattern": "^-?\\d+(?:\\.[05])?$",
-              "description": "The minimal temperature that you want to be able to set in HomeKit, this must be in half degree celsius intervals.",
-              "placeholder": "0.0",
-              "required": false
-            },
-            "max_temper": {
-              "title": "Maximal Temperature",
-              "type": "string",
-              "pattern": "^-?\\d+(?:\\.[05])?$",
-              "description": "The maximal temperature that you want to be able to set in HomeKit, this must be in half degree celsius intervals.",
-              "placeholder": "35.0",
-              "required": false
-            },
-            "min_brightness": {
-              "title": "Minimal Brightness",
-              "type": "string",
-              "pattern": "^-?\\d+$",
-              "description": "The brightness value that Tuya returns when your light is off.",
-              "required": false
-            },
-            "max_brightness": {
-              "title": "Maximal Brightness",
-              "type": "string",
-              "pattern": "^-?\\d+$",
-              "description": "The brightness value that Tuya returns when your light is at its brightest.",
-              "required": false
-            },
-            "min_kelvin": {
-              "title": "Minimal Kelvin",
-              "type": "string",
-              "pattern": "^-?\\d+$",
-              "description": "The kelvin value that Tuya returns when your light is at its warmest (most red).",
-              "required": false
-            },
-            "max_kelvin": {
-              "title": "Maximal Kelvin",
-              "type": "string",
-              "pattern": "^-?\\d+$",
-              "description": "The kelvin value that Tuya returns when your light is at its coolest (most blue).",
-              "required": false
-            },
-            "current_temperature_factor": {
-              "title": "Temperature Factor",
-              "type": "string",
-              "pattern": "^\\d+(?:\\.\\d+)?$",
-              "description": "Alters the reported temperatures in HomeKit. I.e. if HomeKit reports 250 while the temperature is 250, enter `0.1` here to report the correct temperature. Defaults to 1, no change.",
-              "placeholder": "I.e. 0.1",
-              "required": false
-            },
-            "target_temperature_factor": {
-              "title": "Target Temperature Factor",
-              "type": "string",
-              "pattern": "^\\d+(?:\\.\\d+)?$",
-              "description": "Alters the reported target temperatures in HomeKit. Defaults to 1, no change.",
-              "placeholder": "I.e. 0.1",
-              "required": false
-            },
-            "cover_characteristics": {
-              "title": "Features",
-              "type": "array",
-              "uniqueItems": true,
-              "items": {
-                "title": "Feature",
-                "type": "string",
-                "enum": ["Stop"]
-              }
-            },
-            "dimmer_characteristics": {
-              "title": "Features",
-              "type": "array",
-              "uniqueItems": true,
-              "items": {
-                "title": "Feature",
-                "type": "string",
-                "enum": ["Brightness"]
-              }
-            },
-            "fan_characteristics": {
-              "title": "Features",
-              "type": "array",
-              "uniqueItems": true,
-              "items": {
-                "title": "Feature",
-                "type": "string",
-                "enum": ["Speed"]
-              }
-            },
-            "light_characteristics": {
-              "title": "Features",
-              "type": "array",
-              "uniqueItems": true,
-              "items": {
-                "title": "Feature",
-                "type": "string",
-                "enum": ["Brightness", "Color", "Color Temperature"]
-              }
-            }
-          }
-        }
-      },
-      "scenes": {
-        "title": "Expose Tuya scenes to Homekit",
-        "type": "boolean",
-        "required": true,
-        "default": false
-      },
-      "scenesWhitelist": {
-        "title": "Tuya scenes to expose to Homekit",
-        "type": "array",
-        "required": false,
-        "items": {
-          "title": "Scene name or id",
-          "type": "string",
-          "required": true
-        }
+      "pollingInterval": {
+        "title": "Polling Interval (seconds)",
+        "type": "integer",
+        "minimum": 30,
+        "maximum": 3600,
+        "default": 60,
+        "description": "How often to poll Tuya for device status updates (in seconds)"
       },
       "hiddenAccessories": {
-        "title": "Accessories to hide from Homekit",
+        "title": "Hidden Accessories",
         "type": "array",
-        "required": false,
         "items": {
-          "title": "Accessory name or id",
-          "type": "string",
-          "required": true
-        }
+          "type": "string"
+        },
+        "description": "Device IDs or names to hide from HomeKit"
+      },
+      "debug": {
+        "title": "Debug Mode",
+        "type": "boolean",
+        "default": false,
+        "description": "Enable verbose logging for troubleshooting"
       }
     }
   },
   "layout": [
     {
-      "type": "flex",
-      "flex-flow": "row wrap",
-      "items": [
-        "options.username",
-        {
-          "key": "options.password",
-          "type": "password"
-        }
-      ]
-    },
-    "options.countryCode",
-    "options.platform",
-    {
       "type": "fieldset",
-      "title": "Device Settings",
-      "expandable": true,
-      "expanded": false,
+      "title": "Basic Settings",
       "items": [
-        {
-          "type": "array",
-          "items": [
-            {
-              "key": "defaults[].id"
-            },
-            {
-              "key": "defaults[].device_type"
-            },
-            {
-              "key": "defaults[].cover_characteristics",
-              "condition": {
-                "functionBody": "return (['cover', 'window'].includes(model.defaults[arrayIndices].device_type))"
-              }
-            },
-            {
-              "key": "defaults[].dimmer_characteristics",
-              "condition": {
-                "functionBody": "return (model.defaults[arrayIndices].device_type == 'dimmer')"
-              }
-            },
-            {
-              "key": "defaults[].fan_characteristics",
-              "condition": {
-                "functionBody": "return (model.defaults[arrayIndices].device_type == 'fan')"
-              }
-            },
-            {
-              "key": "defaults[].light_characteristics",
-              "condition": {
-                "functionBody": "return (model.defaults[arrayIndices].device_type == 'light')"
-              }
-            },
-            {
-              "key": "defaults[].min_temper",
-              "condition": {
-                "functionBody": "return (model.defaults[arrayIndices].device_type == 'climate')"
-              }
-            },
-            {
-              "key": "defaults[].max_temper",
-              "condition": {
-                "functionBody": "return (model.defaults[arrayIndices].device_type == 'climate')"
-              }
-            },
-            {
-              "key": "defaults[].min_brightness",
-              "condition": {
-                "functionBody": "return (model.defaults[arrayIndices].light_characteristics?.includes('Brightness') || model.defaults[arrayIndices].dimmer_characteristics?.includes('Brightness'))"
-              }
-            },
-            {
-              "key": "defaults[].max_brightness",
-              "condition": {
-                "functionBody": "return (model.defaults[arrayIndices].light_characteristics?.includes('Brightness') || model.defaults[arrayIndices].dimmer_characteristics?.includes('Brightness'))"
-              }
-            },
-            {
-              "key": "defaults[].min_kelvin",
-              "condition": {
-                "functionBody": "return (model.defaults[arrayIndices].light_characteristics?.includes('Color Temperature'))"
-              }
-            },
-            {
-              "key": "defaults[].max_kelvin",
-              "condition": {
-                "functionBody": "return (model.defaults[arrayIndices].light_characteristics?.includes('Color Temperature'))"
-              }
-            },
-            {
-              "key": "defaults[].current_temperature_factor",
-              "condition": {
-                "functionBody": "return (['climate', 'temperature_sensor'].includes(model.defaults[arrayIndices].device_type))"
-              }
-            },
-            {
-              "key": "defaults[].target_temperature_factor",
-              "condition": {
-                "functionBody": "return (model.defaults[arrayIndices].device_type == 'climate')"
-              }
-            }
-          ]
-        }
+        "name",
+        "region"
       ]
     },
     {
       "type": "fieldset",
-      "title": "Optional Settings",
-      "expandable": true,
-      "expanded": false,
-      "items": ["options.pollingInterval"]
-    },
-    {
-      "type": "fieldset",
-      "title": "Advanced",
+      "title": "Advanced Settings",
       "expandable": true,
       "expanded": false,
       "items": [
-        {
-          "title": "Hidden accessories",
-          "type": "array",
-          "description": "Enter the identifiers of accessories that you wish not to expose to HomeKit.",
-          "items": [
-            {
-              "key": "hiddenAccessories[]",
-              "required": true
-            }
-          ]
-        },
-        {
-          "type": "fieldset",
-          "title": "Scenes",
-          "items": [
-            "scenes",
-            {
-              "title": "Whitelisted scene",
-              "type": "array",
-              "description": "Enter the scenes that you wish to expose to Homekit, when left empty <b>all</b> scenes will be exposed.",
-              "condition": {
-                "functionBody": "return (model.scenes)"
-              },
-              "items": [
-                {
-                  "key": "scenesWhitelist[]",
-                  "required": true
-                }
-              ]
-            }
-          ]
-        }
+        "pollingInterval",
+        "hiddenAccessories",
+        "debug"
       ]
     }
   ]

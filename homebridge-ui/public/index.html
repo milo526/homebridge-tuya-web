@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tuya Configuration</title>
+  <style>
+    /* Custom tweaks on top of Bootstrap */
+    .qr-container {
+      text-align: center;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .qr-container img {
+      max-width: 200px;
+      border: 8px solid #fff;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .step-circle {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      background: #007bff;
+      color: #fff;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 24px;
+      font-size: 14px;
+      margin-right: 8px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Spinner */
+    .spinner-border-sm {
+      width: 1rem;
+      height: 1rem;
+      border-width: 0.2em;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container-fluid py-3">
+    <!-- Header -->
+    <div class="row mb-4">
+      <div class="col-12 text-center">
+        <h4><img src="https://raw.githubusercontent.com/homebridge/homebridge/master/brand/logo-big.png" height="30"
+            class="mr-2"> Tuya Configuration</h4>
+      </div>
+    </div>
+
+    <!-- View: Loading -->
+    <div id="loading-view" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">Loading...</span>
+      </div>
+      <p class="mt-2 text-muted">Checking configuration...</p>
+    </div>
+
+    <!-- View: Already Linked -->
+    <div id="linked-view" class="card hidden">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0">✅ Account Connected</h5>
+      </div>
+      <div class="card-body text-center">
+        <div class="py-4">
+          <i class="fa fa-check-circle text-success" style="font-size: 48px;"></i>
+          <h5 class="mt-3">Tuya Account is Linked</h5>
+          <p class="text-muted">Your access tokens are saved and valid.</p>
+
+          <div class="alert alert-light border d-inline-block text-left mt-2">
+            <small>
+              <strong>Region:</strong> <span id="linked-region">US</span><br>
+              <strong>User ID:</strong> <span id="linked-uid">Unknown</span><br>
+              <strong>Expires:</strong> <span id="linked-expiry">Unknown</span>
+            </small>
+          </div>
+        </div>
+
+        <hr>
+        <p class="mb-3 text-muted"><small>Need to switch accounts or refresh credentials?</small></p>
+        <button class="btn btn-outline-danger" onclick="showStartView()">
+          <i class="fa fa-refresh"></i> Re-link Account
+        </button>
+      </div>
+    </div>
+
+    <!-- View: Start Linking -->
+    <div id="start-view" class="card hidden">
+      <div class="card-header">
+        <h5 class="mb-0">Link Tuya Account</h5>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-info">
+          Link your Tuya Smart or Smart Life account by scanning a QR code. No developer account needed.
+        </div>
+
+        <form onsubmit="event.preventDefault(); startLinking();">
+          <div class="form-group">
+            <label for="region">Region</label>
+            <select id="region" class="form-control custom-select">
+              <option value="US">Americas (US)</option>
+              <option value="EU">Europe (EU)</option>
+              <option value="CN">China (CN)</option>
+              <option value="IN">India (IN)</option>
+            </select>
+            <small class="form-text text-muted">Select the region where your Tuya account is registered.</small>
+          </div>
+
+          <div class="form-group">
+            <label for="userCode">User Code</label>
+            <input type="text" id="userCode" class="form-control" placeholder="Found in Tuya App Settings" required>
+            <small class="form-text text-muted">
+              Open Tuya App &rarr; <strong>Settings</strong> &rarr; <strong>Account and Security</strong> &rarr;
+              <strong>User Code</strong>
+            </small>
+          </div>
+
+          <div class="text-center mt-4">
+            <button type="submit" id="start-btn" class="btn btn-primary btn-block btn-lg">
+              <i class="fa fa-qrcode"></i> Generate QR Code
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- View: QR Code -->
+    <div id="qr-view" class="card hidden">
+      <div class="card-header">
+        <h5 class="mb-0">Scan QR Code</h5>
+      </div>
+      <div class="card-body text-center">
+        <div class="qr-container">
+          <img id="qr-image" src="" alt="QR Code" class="img-fluid">
+        </div>
+
+        <div id="status-alert" class="alert alert-warning">
+          <div class="spinner-border spinner-border-sm mr-2" role="status"></div>
+          Waiting for scan...
+        </div>
+
+        <p id="timer" class="text-danger font-weight-bold small"></p>
+
+        <div class="text-left mt-4 px-3">
+          <h6>Instructions:</h6>
+          <ol class="pl-3">
+            <li>Open <strong>Tuya Smart</strong> or <strong>Smart Life</strong> app.</li>
+            <li>Tap the <strong>+</strong> (Plus) icon in the top right.</li>
+            <li>Select the <strong>Scan</strong> (QR Code) icon.</li>
+            <li>Scan the code above and confirm login on your phone.</li>
+          </ol>
+        </div>
+
+        <button id="retry-btn" class="btn btn-secondary btn-block mt-3 hidden" onclick="showStartView()">
+          Try Again
+        </button>
+      </div>
+    </div>
+
+    <!-- View: Success -->
+    <div id="success-view" class="card hidden border-success">
+      <div class="card-body text-center py-5">
+        <i class="fa fa-check-circle text-success mb-3" style="font-size: 64px;"></i>
+        <h3 class="text-success">Success!</h3>
+        <p class="lead">Your account has been linked.</p>
+        <p class="text-muted small">Please restart Homebridge to discover your devices.</p>
+
+        <button class="btn btn-success btn-lg mt-3" onclick="closePluginConfig()">
+          Done & Restart Later
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // State
+    let pollingInterval = null;
+    let timerInterval = null;
+    let expiresAt = null;
+
+    // Initialize
+    (async () => {
+      try {
+        await checkConfig();
+      } catch (e) {
+        console.error(e);
+        showStartView();
+      } finally {
+        document.getElementById('loading-view').classList.add('hidden');
+      }
+    })();
+
+    // Check if already linked
+    async function checkConfig() {
+      const response = await homebridge.request('/get-config');
+      const config = response.config || {};
+
+      if (config.tokens && config.tokens.accessToken) {
+        // Populate Linked View
+        document.getElementById('linked-region').textContent = config.region || 'US';
+        document.getElementById('linked-uid').textContent = config.tokens.uid || 'Native';
+
+        if (config.tokens.expiresAt) {
+          const date = new Date(config.tokens.expiresAt);
+          document.getElementById('linked-expiry').textContent = date.toLocaleDateString();
+        }
+
+        showView('linked-view');
+      } else {
+        showStartView();
+      }
+    }
+
+    function showView(viewId) {
+      ['loading-view', 'start-view', 'qr-view', 'success-view', 'linked-view'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      document.getElementById(viewId).classList.remove('hidden');
+    }
+
+    function showStartView() {
+      clearIntervals();
+      showView('start-view');
+    }
+
+    // Start Linking Process
+    async function startLinking() {
+      const btn = document.getElementById('start-btn');
+      const userCode = document.getElementById('userCode').value.trim();
+      const region = document.getElementById('region').value;
+
+      if (!userCode) {
+        homebridge.toast.error('Please enter your User Code.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Generating...';
+
+      try {
+        const response = await homebridge.request('/start-linking', { region, userCode });
+
+        if (!response.success) throw new Error(response.error);
+
+        // Setup QR View
+        document.getElementById('qr-image').src = response.qrImage;
+        expiresAt = Date.now() + (response.expiresIn * 1000);
+
+        showView('qr-view');
+        updateTimer();
+
+        // Start Timers
+        timerInterval = setInterval(updateTimer, 1000);
+        pollingInterval = setInterval(checkStatus, 2000);
+
+      } catch (e) {
+        homebridge.toast.error(e.message || 'Failed to start linking');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-qrcode"></i> Generate QR Code';
+      }
+    }
+
+    // Poll Status
+    async function checkStatus() {
+      try {
+        const response = await homebridge.request('/check-status');
+
+        if (!response.success) {
+          console.error('Status check failed', response.error);
+          return;
+        }
+
+        const alert = document.getElementById('status-alert');
+
+        if (response.status === 'scanned') {
+          alert.className = 'alert alert-info';
+          alert.innerHTML = '<i class="fa fa-mobile mr-2"></i>QR Code Scanned! Confirm on phone...';
+        } else if (response.status === 'authorized') {
+          clearIntervals();
+          await saveTokens(response.tokens);
+          showView('success-view');
+          homebridge.toast.success('Account linked successfully!');
+        } else if (response.status === 'expired') {
+          handleExpiry();
+        }
+
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Timer & Expiry
+    function updateTimer() {
+      const remaining = Math.ceil((expiresAt - Date.now()) / 1000);
+      const timerEl = document.getElementById('timer');
+
+      if (remaining <= 0) {
+        handleExpiry();
+        return;
+      }
+
+      const mins = Math.floor(remaining / 60);
+      const secs = remaining % 60;
+      timerEl.textContent = `Expires in ${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function handleExpiry() {
+      clearIntervals();
+      const alert = document.getElementById('status-alert');
+      alert.className = 'alert alert-danger';
+      alert.innerHTML = '<i class="fa fa-times-circle mr-2"></i>QR Code Expired.';
+      document.getElementById('retry-btn').classList.remove('hidden');
+      document.getElementById('timer').textContent = '';
+    }
+
+    function clearIntervals() {
+      if (pollingInterval) clearInterval(pollingInterval);
+      if (timerInterval) clearInterval(timerInterval);
+      pollingInterval = null;
+      timerInterval = null;
+    }
+
+    // Save Tokens
+    async function saveTokens(tokens) {
+      const response = await homebridge.request('/get-config');
+      const config = response.config || {};
+
+      config.tokens = tokens;
+      config.region = document.getElementById('region').value;
+
+      await homebridge.updatePluginConfig([config]);
+      await homebridge.savePluginConfig();
+    }
+
+    function closePluginConfig() {
+      // Just try to close or let user restart
+      homebridge.closePluginConfig();
+    }
+  </script>
+
+</body>
+
+</html>

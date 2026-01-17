@@ -39,13 +39,15 @@
     "url": "https://github.com/milo526/homebridge-tuya-web/issues"
   },
   "dependencies": {
-    "axios": "^1.5.1",
-    "lodash.debounce": "^4.0.8"
+    "@types/qrcode": "^1.5.6",
+    "axios": "^1.13.2",
+    "lodash.debounce": "^4.0.8",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@types/lodash.debounce": "^4.0.7",
     "@types/mocha": "^10.0.2",
-    "@types/node": "^16.11.12",
+    "@types/node": "^16.18.126",
     "@typescript-eslint/eslint-plugin": "^6.7.4",
     "@typescript-eslint/parser": "^6.7.4",
     "chai": "^4.3.7",
