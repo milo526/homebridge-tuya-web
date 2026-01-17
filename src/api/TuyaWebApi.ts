@@ -74,6 +74,7 @@ export class TuyaWebApi {
     const commands = this.convertMethodToCommands(deviceId, method, payload);
     
     if (commands.length > 0) {
+      this.log?.debug(`[TuyaWebApi] Sending commands:`, JSON.stringify(commands));
       await this.deviceApi.sendCommands(deviceId, commands);
     }
   }
@@ -121,13 +122,25 @@ export class TuyaWebApi {
         const kelvin = Number(p.value);
         const ratio = Math.max(0, Math.min(1, (kelvin - 2700) / (6500 - 2700)));
         
-        // Check if V2 is supported (based on cached device info or default to V2)
-        // V2 scale: 0-1000, V1 scale: 0-255
-        const v2Value = Math.round(ratio * 1000);
-        const v1Value = Math.round(ratio * 255);
+        // Check if device uses V1 or V2
+        const device = this.deviceCache.get(deviceId);
+        const hasV2Temp = device?.status?.some(s => s.code === 'temp_value_v2');
+        const hasV1Temp = device?.status?.some(s => s.code === 'temp_value');
         
-        // Try V2 first (more common in newer devices)
-        commands.push({ code: 'temp_value_v2', value: v2Value });
+        this.log?.debug(`[TuyaWebApi] colorTemperatureSet: kelvin=${kelvin}, ratio=${ratio}, V2=${hasV2Temp}, V1=${hasV1Temp}`);
+        
+        // Switch to white mode first
+        commands.push({ code: 'work_mode', value: 'white' });
+        
+        if (hasV1Temp && !hasV2Temp) {
+          // V1 scale: 0-255
+          const v1Value = Math.round(ratio * 255);
+          commands.push({ code: 'temp_value', value: v1Value });
+        } else {
+          // V2 scale: 0-1000
+          const v2Value = Math.round(ratio * 1000);
+          commands.push({ code: 'temp_value_v2', value: v2Value });
+        }
         break;
       }
 
@@ -135,15 +148,39 @@ export class TuyaWebApi {
         // Old API sends: hue (0-360), saturation (0-1 fraction), brightness (0-100 percentage)
         const color = p.color as { hue: number; saturation: number; brightness: number };
         
-        // V2 format: h (0-360), s (0-1000), v (0-1000)
-        const colorValueV2 = {
-          h: Math.round(color.hue),
-          s: Math.round(color.saturation * 1000), // 0-1 -> 0-1000
-          v: Math.round(color.brightness * 10),   // 0-100 -> 0-1000
-        };
-        commands.push({ code: 'colour_data_v2', value: JSON.stringify(colorValueV2) });
-        // Also set work mode to color
+        this.log?.debug(`[TuyaWebApi] colorSet input: hue=${color.hue}, saturation=${color.saturation}, brightness=${color.brightness}`);
+        
+        // Check if device uses V1 or V2 based on cached data
+        const device = this.deviceCache.get(deviceId);
+        const hasV2Color = device?.status?.some(s => s.code === 'colour_data_v2');
+        const hasV1Color = device?.status?.some(s => s.code === 'colour_data');
+        
+        this.log?.debug(`[TuyaWebApi] Device color support: V2=${hasV2Color}, V1=${hasV1Color}`);
+        
+        // Set work mode to color first
         commands.push({ code: 'work_mode', value: 'colour' });
+        
+        if (hasV1Color && !hasV2Color) {
+          // V1 format: h (0-360), s (0-255), v (0-255)
+          // Value should be an OBJECT, not a JSON string (per Tuya docs)
+          const colorValueV1 = {
+            h: Math.max(1, Math.round(color.hue)), // min 1 for V1
+            s: Math.round(color.saturation * 255), // 0-1 -> 0-255
+            v: Math.round((color.brightness / 100) * 255), // 0-100 -> 0-255
+          };
+          this.log?.debug(`[TuyaWebApi] colorSet V1 output:`, colorValueV1);
+          commands.push({ code: 'colour_data', value: colorValueV1 });
+        } else {
+          // V2 format: h (0-360), s (0-1000), v (0-1000)
+          // Value should be an OBJECT, not a JSON string (per Tuya docs)
+          const colorValueV2 = {
+            h: Math.round(color.hue),
+            s: Math.round(color.saturation * 1000), // 0-1 -> 0-1000
+            v: Math.round(color.brightness * 10),   // 0-100 -> 0-1000
+          };
+          this.log?.debug(`[TuyaWebApi] colorSet V2 output:`, colorValueV2);
+          commands.push({ code: 'colour_data_v2', value: colorValueV2 });
+        }
         break;
       }
 

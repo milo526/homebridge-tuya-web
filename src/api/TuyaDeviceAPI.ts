@@ -37,7 +37,7 @@ export interface TuyaDeviceStatus {
 
 export interface TuyaDeviceCommand {
   code: string;
-  value: boolean | number | string;
+  value: boolean | number | string | Record<string, unknown>;
 }
 
 // Device category mapping to HomeKit accessory types
@@ -376,32 +376,37 @@ export class TuyaDeviceAPI {
 
   /**
    * Set HSV color (for RGB lights)
+   * @param h Hue 0-360
+   * @param s Saturation 0-100
+   * @param v Value/Brightness 0-100
    */
   public async setColor(deviceId: string, h: number, s: number, v: number): Promise<boolean> {
     const status = await this.getDeviceStatus(deviceId);
 
     // Check for V2 (0-1000)
-    if (status.some(s => s.code === 'colour_data_v2')) {
-      // Tuya expects HSV in specific format
+    if (status.some(st => st.code === 'colour_data_v2')) {
+      // Tuya V2 expects: h (0-360), s (0-1000), v (0-1000)
+      // Value should be an object, not a JSON string (per Tuya docs)
       const colorValue = {
         h: Math.round(h),           // 0-360
-        s: Math.round(s * 10),      // 0-1000
-        v: Math.round(v * 10),      // 0-1000
+        s: Math.round(s * 10),      // 0-100 -> 0-1000
+        v: Math.round(v * 10),      // 0-100 -> 0-1000
       };
       return this.sendCommands(deviceId, [
-        { code: 'colour_data_v2', value: JSON.stringify(colorValue) },
+        { code: 'colour_data_v2', value: colorValue },
       ]);
     }
 
     // Check for V1 (0-255)
-    if (status.some(s => s.code === 'colour_data')) {
+    if (status.some(st => st.code === 'colour_data')) {
+      // Tuya V1 expects: h (0-360), s (0-255), v (0-255)
       const colorValue = {
         h: Math.max(1, Math.min(360, Math.round(h))), // min 1
-        s: Math.max(0, Math.min(255, Math.round(s * 2.55))),
-        v: Math.max(0, Math.min(255, Math.round(v * 2.55))),
+        s: Math.max(0, Math.min(255, Math.round((s / 100) * 255))),
+        v: Math.max(0, Math.min(255, Math.round((v / 100) * 255))),
       };
       return this.sendCommands(deviceId, [
-        { code: 'colour_data', value: JSON.stringify(colorValue) },
+        { code: 'colour_data', value: colorValue },
       ]);
     }
     
