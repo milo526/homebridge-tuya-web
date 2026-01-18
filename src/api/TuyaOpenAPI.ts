@@ -20,10 +20,13 @@ export interface TuyaApiResponse<T = unknown> {
   tid: string;
 }
 
+export type TokenRefreshCallback = (tokens: TuyaTokens) => void;
+
 export class TuyaOpenAPI {
   private client: AxiosInstance;
   private tokens?: TuyaTokens;
   private tokenRefreshTimer?: NodeJS.Timeout;
+  private onTokenRefresh?: TokenRefreshCallback;
 
   constructor(
     private readonly region: TuyaRegion = 'US',
@@ -41,6 +44,14 @@ export class TuyaOpenAPI {
       (config) => this.signRequest(config),
       (error) => Promise.reject(error),
     );
+  }
+
+  /**
+   * Set a callback to be called when tokens are refreshed
+   * This allows the platform to persist the new tokens and sync with other APIs
+   */
+  public setTokenRefreshCallback(callback: TokenRefreshCallback): void {
+    this.onTokenRefresh = callback;
   }
 
   /**
@@ -99,6 +110,11 @@ export class TuyaOpenAPI {
 
     this.scheduleTokenRefresh();
     this.log?.debug('Refreshed access token, expires in', expire_time, 'seconds');
+
+    // Notify callback so platform can persist tokens and sync with other APIs
+    if (this.onTokenRefresh) {
+      this.onTokenRefresh(this.tokens);
+    }
 
     return this.tokens;
   }

@@ -141,12 +141,55 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     // Create old-style API wrapper for accessories
     this.tuyaWebApi = new TuyaWebApi(this.deviceApi, this.log);
 
+    // Set up token refresh callbacks to sync tokens between APIs and persist
+    this.setupTokenRefreshCallbacks();
+
     // Restore tokens if available
     if (this.config.tokens?.accessToken) {
       this.log.debug('Restoring saved tokens');
       this.openApi.setTokens(this.config.tokens);
       this.mobileApi.setTokens(this.config.tokens);
     }
+  }
+
+  /**
+   * Set up token refresh callbacks to sync tokens between APIs
+   * When either API refreshes tokens, update both and persist to config
+   */
+  private setupTokenRefreshCallbacks(): void {
+    const handleTokenRefresh = (tokens: TuyaTokens, source: 'openApi' | 'mobileApi') => {
+      this.log.debug(`Tokens refreshed by ${source}, syncing...`);
+      
+      // Update both APIs with the new tokens (avoid re-triggering callbacks)
+      if (source === 'openApi') {
+        this.mobileApi.setTokens(tokens);
+      } else {
+        this.openApi.setTokens(tokens);
+      }
+
+      // Persist tokens to config
+      this.persistTokens(tokens);
+    };
+
+    this.openApi.setTokenRefreshCallback((tokens) => handleTokenRefresh(tokens, 'openApi'));
+    this.mobileApi.setTokenRefreshCallback((tokens) => handleTokenRefresh(tokens, 'mobileApi'));
+  }
+
+  /**
+   * Persist tokens to the Homebridge config
+   * Note: This updates the in-memory config. The actual file persistence
+   * happens through the Homebridge Config UI when settings are saved.
+   */
+  private persistTokens(tokens: TuyaTokens): void {
+    this.log.debug('Persisting refreshed tokens to config');
+    this.config.tokens = tokens;
+    
+    // Note: Homebridge doesn't provide a direct API to persist config changes at runtime.
+    // The tokens will be used for the current session. Users should re-link if tokens
+    // become invalid after a restart, or the Config UI can handle persistence.
+    // 
+    // For proper persistence, we can emit an event or use the Homebridge storage API
+    // if available. For now, the config is updated in memory.
   }
 
   /**
