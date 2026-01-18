@@ -46,8 +46,10 @@ export class BrightnessCharacteristic extends TuyaWebCharacteristic {
       minTuya = Number(this.accessory.deviceConfig.config?.min_brightness);
       maxTuya = Number(this.accessory.deviceConfig.config?.max_brightness);
     } else if (this.usesColorBrightness) {
-      minTuya = 1;
-      maxTuya = 255;
+      // response.ts already converts colour_data (v 0-255) and colour_data_v2 (v 0-1000)
+      // to 0-100 in data.color.brightness. HomeKit expects 0-100, so use 1:1 mapping.
+      minTuya = 0;
+      maxTuya = 100;
     }
 
     return MapRange.tuya(minTuya, maxTuya).homeKit(0, 100);
@@ -67,7 +69,12 @@ export class BrightnessCharacteristic extends TuyaWebCharacteristic {
     homekitValue: CharacteristicValue,
     callback: CharacteristicSetCallback,
   ): void {
-    const value = this.rangeMapper.homekitToTuya(Number(homekitValue));
+    // When usesColorBrightness, data.color.brightness and TuyaWebApi brightnessSet
+    // expect 0-100 (response.ts and TuyaWebApi both use 0-100). Otherwise use
+    // rangeMapper for bright_value (0-255) / bright_value_v2 (10-1000) scales.
+    const value = this.usesColorBrightness
+      ? Number(homekitValue)
+      : this.rangeMapper.homekitToTuya(Number(homekitValue));
 
     this.accessory
       .setDeviceState(
