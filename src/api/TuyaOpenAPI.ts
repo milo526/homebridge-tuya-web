@@ -89,40 +89,54 @@ export class TuyaOpenAPI {
       throw new Error('No refresh token available');
     }
 
-    this.log?.debug('Refreshing access token...');
+    this.log?.info('Refreshing access token...');
 
-    // Use the unauthenticated request method for token refresh
-    // The refresh endpoint doesn't require access_token in the signature
-    const response = await this.requestWithoutAccessToken<{
-      access_token: string;
-      refresh_token: string;
-      expire_time: number;
-      uid: string;
-    }>(`/v1.0/token/${this.tokens.refreshToken}`, 'GET');
+    try {
+      // Use the unauthenticated request method for token refresh
+      // The refresh endpoint doesn't require access_token in the signature
+      const response = await this.requestWithoutAccessToken<{
+        access_token: string;
+        refresh_token: string;
+        expire_time: number;
+        uid: string;
+      }>(`/v1.0/token/${this.tokens.refreshToken}`, 'GET');
 
-    if (!response.success || !response.result) {
-      throw new Error(`Failed to refresh token: ${response.msg}`);
+      if (!response.success || !response.result) {
+        // Log the full error for debugging
+        this.log?.error('Token refresh failed:', JSON.stringify(response));
+        
+        // Check for specific error codes
+        if (response.code === 1010 || response.code === 1004) {
+          // Token expired or invalid - need to re-authenticate
+          throw new Error(`Token refresh failed (code ${response.code}): ${response.msg}. Please re-link your Tuya account.`);
+        }
+        throw new Error(`Failed to refresh token: ${response.msg}`);
+      }
+
+      const { access_token, refresh_token, expire_time, uid } = response.result;
+      
+      this.tokens = {
+        accessToken: access_token,
+        refreshToken: refresh_token,
+        expiresIn: expire_time,
+        expiresAt: Date.now() + expire_time * 1000,
+        uid,
+      };
+
+      this.scheduleTokenRefresh();
+      this.log?.info('Access token refreshed successfully, expires in', expire_time, 'seconds');
+
+      // Notify callback so platform can persist tokens and sync with other APIs
+      if (this.onTokenRefresh) {
+        this.onTokenRefresh(this.tokens);
+      }
+
+      return this.tokens;
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.log?.error('Token refresh error:', errorMsg);
+      throw error;
     }
-
-    const { access_token, refresh_token, expire_time, uid } = response.result;
-    
-    this.tokens = {
-      accessToken: access_token,
-      refreshToken: refresh_token,
-      expiresIn: expire_time,
-      expiresAt: Date.now() + expire_time * 1000,
-      uid,
-    };
-
-    this.scheduleTokenRefresh();
-    this.log?.debug('Refreshed access token, expires in', expire_time, 'seconds');
-
-    // Notify callback so platform can persist tokens and sync with other APIs
-    if (this.onTokenRefresh) {
-      this.onTokenRefresh(this.tokens);
-    }
-
-    return this.tokens;
   }
 
   /**
@@ -154,10 +168,14 @@ export class TuyaOpenAPI {
       .toUpperCase();
 
     // Make request directly without using the interceptor
+    const url = TUYA_ENDPOINTS[this.region] + path;
+    this.log?.debug('Token refresh request to:', url);
+
     const response: AxiosResponse<TuyaApiResponse<T>> = await axios.request({
-      url: TUYA_ENDPOINTS[this.region] + path,
+      url,
       method,
       data,
+      timeout: 15000, // 15 second timeout
       headers: {
         'client_id': TUYA_CLIENT_ID,
         't': timestamp,
@@ -169,6 +187,7 @@ export class TuyaOpenAPI {
       },
     });
 
+    this.log?.debug('Token refresh response:', JSON.stringify(response.data));
     return response.data;
   }
 
