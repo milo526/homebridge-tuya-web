@@ -20,6 +20,7 @@ import {
   TuyaRegion,
   convertNewDeviceToOld,
 } from './api';
+import { TokenStorage } from './helpers/TokenStorage';
 import {
   BaseAccessory,
   LightAccessory,
@@ -86,6 +87,9 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
   // Old-style API wrapper for accessories
   public tuyaWebApi!: TuyaWebApi;
 
+  // Token persistence
+  private tokenStorage!: TokenStorage;
+
   // Platform accessory constructor
   public readonly platformAccessory: typeof PlatformAccessory;
 
@@ -141,14 +145,57 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     // Create old-style API wrapper for accessories
     this.tuyaWebApi = new TuyaWebApi(this.deviceApi, this.log);
 
+    // Initialize token storage for persistence across restarts
+    this.tokenStorage = new TokenStorage(this.hbApi);
+
     // Set up token refresh callbacks to sync tokens between APIs and persist
     this.setupTokenRefreshCallbacks();
 
-    // Restore tokens if available
-    if (this.config.tokens?.accessToken) {
-      this.log.debug('Restoring saved tokens');
-      this.openApi.setTokens(this.config.tokens);
-      this.mobileApi.setTokens(this.config.tokens);
+    // Load tokens - try storage first (may have refreshed tokens), then config
+    this.loadAndRestoreTokens();
+  }
+
+  /**
+   * Load tokens from storage or config
+   * Storage takes priority if it has newer tokens (from runtime refresh)
+   */
+  private async loadAndRestoreTokens(): Promise<void> {
+    try {
+      // Try to load from persistent storage first (contains refreshed tokens)
+      const storedTokens = await this.tokenStorage.loadTokens();
+      const configTokens = this.config.tokens;
+
+      let tokensToUse: TuyaTokens | null = null;
+
+      if (storedTokens && configTokens) {
+        // Use whichever tokens are newer (have later expiry)
+        if (storedTokens.expiresAt > configTokens.expiresAt) {
+          this.log.debug('Using tokens from storage (newer than config)');
+          tokensToUse = storedTokens;
+        } else {
+          this.log.debug('Using tokens from config (newer than storage)');
+          tokensToUse = configTokens;
+        }
+      } else if (storedTokens) {
+        this.log.debug('Using tokens from storage');
+        tokensToUse = storedTokens;
+      } else if (configTokens?.accessToken) {
+        this.log.debug('Using tokens from config');
+        tokensToUse = configTokens;
+      }
+
+      if (tokensToUse) {
+        this.openApi.setTokens(tokensToUse);
+        this.mobileApi.setTokens(tokensToUse);
+        this.log.info('Tokens restored, expires at:', new Date(tokensToUse.expiresAt).toLocaleString());
+      }
+    } catch (error) {
+      this.log.error('Failed to load tokens:', error);
+      // Fall back to config tokens
+      if (this.config.tokens?.accessToken) {
+        this.openApi.setTokens(this.config.tokens);
+        this.mobileApi.setTokens(this.config.tokens);
+      }
     }
   }
 
@@ -177,20 +224,23 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
   }
 
   /**
-   * Persist tokens to the Homebridge config
-   * Note: This updates the in-memory config. The actual file persistence
-   * happens through the Homebridge Config UI when settings are saved.
+   * Persist tokens to storage
+   * Saves to a file in Homebridge's storage directory so tokens survive restarts.
    */
   private persistTokens(tokens: TuyaTokens): void {
-    this.log.debug('Persisting refreshed tokens to config');
+    this.log.info('Persisting refreshed tokens to storage');
+    
+    // Update in-memory config
     this.config.tokens = tokens;
     
-    // Note: Homebridge doesn't provide a direct API to persist config changes at runtime.
-    // The tokens will be used for the current session. Users should re-link if tokens
-    // become invalid after a restart, or the Config UI can handle persistence.
-    // 
-    // For proper persistence, we can emit an event or use the Homebridge storage API
-    // if available. For now, the config is updated in memory.
+    // Save to persistent storage file
+    this.tokenStorage.saveTokens(tokens)
+      .then(() => {
+        this.log.debug('Tokens saved to persistent storage');
+      })
+      .catch((error) => {
+        this.log.error('Failed to persist tokens:', error);
+      });
   }
 
   /**

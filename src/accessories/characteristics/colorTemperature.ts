@@ -10,8 +10,18 @@ import { MapRange } from "../../helpers/MapRange";
 import { BaseAccessory } from "../BaseAccessory";
 import type { DeviceState } from "../../api/response";
 
-// Homekit uses mired light units, Tuya uses kelvin
-// Mired = 1.000.000/Kelvin
+// HomeKit uses mired light units, Tuya uses kelvin
+// Mired = 1,000,000 / Kelvin
+// HomeKit valid range: 140-500 mireds (≈7143K to 2000K)
+// Typical Tuya bulbs: 2700K-6500K (≈370 to 154 mireds)
+
+// HomeKit absolute limits
+const HOMEKIT_MIN_MIRED = 140; // ≈7143K (coolest)
+const HOMEKIT_MAX_MIRED = 500; // 2000K (warmest)
+
+// Default Tuya Kelvin range (matches response.ts conversion)
+const DEFAULT_MIN_KELVIN = 2700; // Warm white
+const DEFAULT_MAX_KELVIN = 6500; // Cool white
 
 export class ColorTemperatureCharacteristic extends TuyaWebCharacteristic {
   public static Title = "Characteristic.ColorTemperature";
@@ -29,25 +39,29 @@ export class ColorTemperatureCharacteristic extends TuyaWebCharacteristic {
       format: Formats.INT,
       minValue: this.minHomekit,
       maxValue: this.maxHomekit,
+      minStep: 1,
     });
   }
 
   public get minKelvin(): number {
     const data = this.accessory.deviceConfig.config;
-    return Number(data?.min_kelvin) || 1000000 / 500;
+    return Number(data?.min_kelvin) || DEFAULT_MIN_KELVIN;
   }
 
   public get maxKelvin(): number {
     const data = this.accessory.deviceConfig.config;
-    return Number(data?.max_kelvin) || 1000000 / 140;
+    return Number(data?.max_kelvin) || DEFAULT_MAX_KELVIN;
   }
 
+  // Convert Kelvin to Mired, clamped to HomeKit's valid range
   public get minHomekit(): number {
-    return 1000000 / this.maxKelvin;
+    const mired = Math.round(1000000 / this.maxKelvin);
+    return Math.max(HOMEKIT_MIN_MIRED, Math.min(HOMEKIT_MAX_MIRED, mired));
   }
 
   public get maxHomekit(): number {
-    return 1000000 / this.minKelvin;
+    const mired = Math.round(1000000 / this.minKelvin);
+    return Math.max(HOMEKIT_MIN_MIRED, Math.min(HOMEKIT_MAX_MIRED, mired));
   }
 
   public rangeMapper = MapRange.tuya(this.maxKelvin, this.minKelvin).homeKit(

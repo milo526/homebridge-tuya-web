@@ -88,27 +88,32 @@ export class BrightnessCharacteristic extends TuyaWebCharacteristic {
     const tuyaValue = Number(
       this.usesColorBrightness ? data.color?.brightness : data.brightness,
     );
-    const homekitValue = this.rangeMapper.tuyaToHomekit(tuyaValue);
+    let homekitValue = this.rangeMapper.tuyaToHomekit(tuyaValue);
 
+    // Clamp to HomeKit valid range (0-100)
     if (homekitValue > 100) {
       this.warn(
-        "Characteristic 'Brightness' will receive value higher than allowed (%s) since provided Tuya value (%s) " +
-          "exceeds configured maximum Tuya value (%s). Please update your configuration!",
+        "Characteristic 'Brightness' received value higher than allowed (%s) from Tuya value (%s). " +
+          "Clamping to 100. Consider updating your min/max brightness configuration.",
         homekitValue,
         tuyaValue,
-        this.rangeMapper.tuyaEnd,
       );
+      homekitValue = 100;
     } else if (homekitValue < 0) {
       this.warn(
-        "Characteristic 'Brightness' will receive value lower than allowed (%s) since provided Tuya value (%s) " +
-          "is lower than configured minimum Tuya value (%s). Please update your configuration!",
+        "Characteristic 'Brightness' received value lower than allowed (%s) from Tuya value (%s). " +
+          "Clamping to 0. Consider updating your min/max brightness configuration.",
         homekitValue,
         tuyaValue,
-        this.rangeMapper.tuyaStart,
       );
+      homekitValue = 0;
     }
 
-    if (homekitValue) {
+    // Round to integer for HomeKit
+    homekitValue = Math.round(homekitValue);
+
+    // Allow 0 as a valid value (light is off)
+    if (homekitValue !== undefined && !isNaN(homekitValue)) {
       this.accessory.setCharacteristic(
         this.homekitCharacteristic,
         homekitValue,

@@ -77,13 +77,12 @@
       <div class="card-header bg-success text-white">
         <h5 class="mb-0">✅ Account Connected</h5>
       </div>
-      <div class="card-body text-center">
-        <div class="py-4">
-          <i class="fa fa-check-circle text-success" style="font-size: 48px;"></i>
-          <h5 class="mt-3">Tuya Account is Linked</h5>
-          <p class="text-muted">Your access tokens are saved and valid.</p>
+      <div class="card-body">
+        <div class="text-center py-3">
+          <i class="fa fa-check-circle text-success" style="font-size: 36px;"></i>
+          <h5 class="mt-2">Tuya Account is Linked</h5>
 
-          <div class="alert alert-light border d-inline-block text-left mt-2">
+          <div class="alert alert-light border d-inline-block text-left mt-2 mb-0">
             <small>
               <strong>Region:</strong> <span id="linked-region">US</span><br>
               <strong>User ID:</strong> <span id="linked-uid">Unknown</span><br>
@@ -93,10 +92,44 @@
         </div>
 
         <hr>
-        <p class="mb-3 text-muted"><small>Need to switch accounts or refresh credentials?</small></p>
-        <button class="btn btn-outline-danger" onclick="showStartView()">
-          <i class="fa fa-refresh"></i> Re-link Account
-        </button>
+
+        <!-- Settings Form -->
+        <h6 class="mb-3"><i class="fa fa-cog"></i> Settings</h6>
+        <form id="settings-form" onsubmit="event.preventDefault(); saveSettings();">
+          <div class="form-group">
+            <label for="pollingInterval">Polling Interval (seconds)</label>
+            <input type="number" id="pollingInterval" class="form-control" min="10" max="3600" value="60">
+            <small class="form-text">How often to poll for device status updates (10-3600 seconds)</small>
+          </div>
+
+          <div class="form-group">
+            <label for="hiddenAccessories">Hidden Devices</label>
+            <input type="text" id="hiddenAccessories" class="form-control" placeholder="device_id_1, device_id_2">
+            <small class="form-text">Comma-separated list of device IDs or names to hide from HomeKit</small>
+          </div>
+
+          <div class="form-group">
+            <div class="custom-control custom-switch">
+              <input type="checkbox" class="custom-control-input" id="debugMode">
+              <label class="custom-control-label" for="debugMode">Debug Mode</label>
+            </div>
+            <small class="form-text">Enable verbose logging for troubleshooting</small>
+          </div>
+
+          <div class="text-center mt-4">
+            <button type="submit" id="save-settings-btn" class="btn btn-primary">
+              <i class="fa fa-save"></i> Save Settings
+            </button>
+          </div>
+        </form>
+
+        <hr class="mt-4">
+        <div class="text-center">
+          <p class="mb-2 text-muted"><small>Need to switch accounts or refresh credentials?</small></p>
+          <button class="btn btn-outline-danger btn-sm" onclick="showStartView()">
+            <i class="fa fa-refresh"></i> Re-link Account
+          </button>
+        </div>
       </div>
     </div>
 
@@ -217,12 +250,47 @@
 
         if (config.tokens.expiresAt) {
           const date = new Date(config.tokens.expiresAt);
-          document.getElementById('linked-expiry').textContent = date.toLocaleDateString();
+          document.getElementById('linked-expiry').textContent = date.toLocaleString();
         }
+
+        // Populate settings form
+        document.getElementById('pollingInterval').value = config.pollingInterval || 60;
+        document.getElementById('hiddenAccessories').value = (config.hiddenAccessories || []).join(', ');
+        document.getElementById('debugMode').checked = config.debug || false;
 
         showView('linked-view');
       } else {
         showStartView();
+      }
+    }
+
+    // Save settings
+    async function saveSettings() {
+      const btn = document.getElementById('save-settings-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Saving...';
+
+      try {
+        const response = await homebridge.request('/get-config');
+        const config = response.config || {};
+
+        // Update settings
+        config.pollingInterval = parseInt(document.getElementById('pollingInterval').value) || 60;
+        
+        const hiddenInput = document.getElementById('hiddenAccessories').value.trim();
+        config.hiddenAccessories = hiddenInput ? hiddenInput.split(',').map(s => s.trim()).filter(s => s) : [];
+        
+        config.debug = document.getElementById('debugMode').checked;
+
+        await homebridge.updatePluginConfig([config]);
+        await homebridge.savePluginConfig();
+
+        homebridge.toast.success('Settings saved! Restart Homebridge to apply changes.');
+      } catch (e) {
+        homebridge.toast.error(e.message || 'Failed to save settings');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-save"></i> Save Settings';
       }
     }
 

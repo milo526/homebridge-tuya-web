@@ -59,6 +59,16 @@ export class HueCharacteristic extends TuyaWebCharacteristic<ColorAccessory> {
       stateValue = Number(data.color.hue);
     }
 
+    // Clamp to HomeKit valid range (0-360)
+    if (stateValue < 0) {
+      this.debug("Hue value %s below 0, clamping to 0", stateValue);
+      stateValue = 0;
+    } else if (stateValue > 360) {
+      this.debug("Hue value %s above 360, clamping to 360", stateValue);
+      stateValue = 360;
+    }
+    stateValue = Math.round(stateValue);
+
     this.accessory.setCharacteristic(
       this.homekitCharacteristic,
       stateValue,

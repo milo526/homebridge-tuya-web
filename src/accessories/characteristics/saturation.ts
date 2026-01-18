@@ -59,6 +59,16 @@ export class SaturationCharacteristic extends TuyaWebCharacteristic<ColorAccesso
       stateValue = Number(data.color.saturation);
     }
 
+    // Clamp to HomeKit valid range (0-100)
+    if (stateValue < 0) {
+      this.debug("Saturation value %s below 0, clamping to 0", stateValue);
+      stateValue = 0;
+    } else if (stateValue > 100) {
+      this.debug("Saturation value %s above 100, clamping to 100", stateValue);
+      stateValue = 100;
+    }
+    stateValue = Math.round(stateValue);
+
     this.accessory.setCharacteristic(
       this.homekitCharacteristic,
       stateValue,
