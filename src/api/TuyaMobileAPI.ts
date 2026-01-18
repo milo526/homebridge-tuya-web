@@ -4,7 +4,8 @@
  * Replicates the logic from tuya-device-sharing-sdk (CustomerApi.py).
  * Used for the `haauthorize` flow which requires encryption and custom signing.
  * 
- * Reference: https://github.com/tuya/tuya-device-sharing-sdk/blob/main/tuya_sharing/customerapi.py
+ * The MobileAPI uses refresh_token for request signing, so requests continue
+ * to work regardless of access_token expiry. No token refresh is needed.
  */
 
 import axios, { AxiosInstance } from 'axios';
@@ -13,19 +14,9 @@ import type { Logger } from 'homebridge';
 import { TUYA_CLIENT_ID } from './credentials';
 import { TuyaTokens } from './TuyaLinkingAuth';
 
-/**
- * Callback type for when tokens need to be refreshed.
- * The callback should perform the refresh and return the new tokens.
- */
-export type TokenRefreshHandler = () => Promise<TuyaTokens>;
-
 export class TuyaMobileAPI {
   private client: AxiosInstance;
   private tokens?: TuyaTokens;
-  private userCode?: string; 
-  private isRefreshing = false;
-  private refreshPromise?: Promise<TuyaTokens>;
-  private tokenRefreshHandler?: TokenRefreshHandler;
 
   constructor(
     private readonly baseUrl: string,
@@ -46,58 +37,17 @@ export class TuyaMobileAPI {
   }
 
   /**
-   * Set a handler to be called when tokens need to be refreshed.
-   * The handler should perform the actual refresh (e.g., via OpenAPI)
-   * and return the new tokens. The MobileAPI will then update its tokens.
+   * Check if we have tokens available
    */
-  public setTokenRefreshHandler(handler: TokenRefreshHandler): void {
-    this.tokenRefreshHandler = handler;
-  }
-
-  /**
-   * Check if the access token is expired or about to expire
-   */
-  public isTokenExpired(): boolean {
-    if (!this.tokens) {
-      return true;
-    }
-    // Consider token expired if it expires in less than 5 minutes
-    return this.tokens.expiresAt < Date.now() + 5 * 60 * 1000;
-  }
-
-  /**
-   * Ensure we have a valid token before making requests.
-   * Delegates to the tokenRefreshHandler if tokens are expired.
-   */
-  private async ensureValidToken(): Promise<void> {
-    if (!this.isTokenExpired()) {
-      return;
-    }
-
-    if (!this.tokenRefreshHandler) {
-      throw new Error('Token expired. Please re-link your Tuya account.');
-    }
-
-    // Prevent concurrent refresh attempts
-    if (this.isRefreshing && this.refreshPromise) {
-      await this.refreshPromise;
-      return;
-    }
-
-    this.isRefreshing = true;
-    this.refreshPromise = this.tokenRefreshHandler();
-
-    try {
-      const newTokens = await this.refreshPromise;
-      this.tokens = newTokens;
-    } finally {
-      this.isRefreshing = false;
-      this.refreshPromise = undefined;
-    }
+  public hasTokens(): boolean {
+    return !!this.tokens?.refreshToken;
   }
 
   /**
    * Make a request to the Mobile API
+   * 
+   * Note: The MobileAPI uses refresh_token for request signing, so requests
+   * continue to work regardless of access_token expiry. No refresh needed.
    */
   public async request<T = unknown>(
     path: string,
@@ -106,11 +56,8 @@ export class TuyaMobileAPI {
     body: Record<string, unknown> = {},
   ): Promise<{ success: boolean; result?: T; msg?: string; code?: number }> {
     if (!this.tokens?.refreshToken) {
-      throw new Error('No refresh token available. Cannot sign Mobile API request.');
+      throw new Error('No tokens available. Please link your Tuya account.');
     }
-
-    // Ensure we have a valid (non-expired) token before making the request
-    await this.ensureValidToken();
 
     // 1. Generate Request ID (rid)
     const rid = crypto.randomUUID();

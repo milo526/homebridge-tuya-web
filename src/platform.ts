@@ -151,51 +151,25 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
 
     // Initialize token storage for persistence across restarts
     this.tokenStorage = new TokenStorage(this.hbApi);
-
-    // Set up token refresh callbacks to sync tokens between APIs and persist
-    this.setupTokenRefreshCallbacks();
-    
-    // Note: Token loading happens in didFinishLaunching to ensure it completes
-    // before device discovery starts
   }
 
   /**
    * Load tokens from storage or config
-   * Storage takes priority if it has newer tokens (from runtime refresh)
    */
   private async loadAndRestoreTokens(): Promise<void> {
     try {
-      // Try to load from persistent storage first (contains refreshed tokens)
       const storedTokens = await this.tokenStorage.loadTokens();
       const configTokens = this.config.tokens;
 
-      let tokensToUse: TuyaTokens | null = null;
+      // Prefer stored tokens, fall back to config
+      const tokensToUse = storedTokens || configTokens;
 
-      if (storedTokens && configTokens) {
-        // Use whichever tokens are newer (have later expiry)
-        if (storedTokens.expiresAt > configTokens.expiresAt) {
-          this.log.debug('Using tokens from storage (newer than config)');
-          tokensToUse = storedTokens;
-        } else {
-          this.log.debug('Using tokens from config (newer than storage)');
-          tokensToUse = configTokens;
-        }
-      } else if (storedTokens) {
-        this.log.debug('Using tokens from storage');
-        tokensToUse = storedTokens;
-      } else if (configTokens?.accessToken) {
-        this.log.debug('Using tokens from config');
-        tokensToUse = configTokens;
-      }
-
-      if (tokensToUse) {
+      if (tokensToUse?.accessToken) {
         this.openApi.setTokens(tokensToUse);
         this.mobileApi.setTokens(tokensToUse);
-        this.log.info('Tokens restored, expires at:', new Date(tokensToUse.expiresAt).toLocaleString());
       }
     } catch (error) {
       this.log.error('Failed to load tokens:', error);
-      // Fall back to config tokens
       if (this.config.tokens?.accessToken) {
         this.openApi.setTokens(this.config.tokens);
         this.mobileApi.setTokens(this.config.tokens);
@@ -203,41 +177,6 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     }
   }
 
-  /**
-   * Set up token refresh callbacks and handlers to sync tokens between APIs
-   */
-  private setupTokenRefreshCallbacks(): void {
-    // When OpenAPI refreshes tokens, sync to MobileAPI and persist
-    this.openApi.setTokenRefreshCallback((tokens: TuyaTokens) => {
-      this.mobileApi.setTokens(tokens);
-      this.persistTokens(tokens);
-    });
-
-    // When MobileAPI needs to refresh, delegate to OpenAPI
-    this.mobileApi.setTokenRefreshHandler(async (): Promise<TuyaTokens> => {
-      return await this.openApi.refreshAccessToken();
-    });
-  }
-
-  /**
-   * Persist tokens to storage
-   * Saves to a file in Homebridge's storage directory so tokens survive restarts.
-   */
-  private persistTokens(tokens: TuyaTokens): void {
-    this.log.info('Persisting refreshed tokens to storage');
-    
-    // Update in-memory config
-    this.config.tokens = tokens;
-    
-    // Save to persistent storage file
-    this.tokenStorage.saveTokens(tokens)
-      .then(() => {
-        this.log.debug('Tokens saved to persistent storage');
-      })
-      .catch((error) => {
-        this.log.error('Failed to persist tokens:', error);
-      });
-  }
 
   /**
    * Get API instances for custom UI
