@@ -10,7 +10,7 @@ import {
   SaturationCharacteristic,
 } from "./characteristics";
 import { ColorAccessory } from "./ColorAccessory";
-import { TuyaDevice } from "../api/response";
+import type { TuyaDevice } from "../api/response";
 
 export class LightAccessory extends ColorAccessory {
   constructor(

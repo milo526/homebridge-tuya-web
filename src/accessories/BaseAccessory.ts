@@ -21,6 +21,7 @@ import {
   TuyaApiMethod,
   TuyaApiPayload,
   TuyaDevice,
+  TuyaDeviceConfig,
 } from "../api/response";
 import { Cache } from "../helpers/cache";
 import { TuyaDeviceDefaults } from "../config";
@@ -133,7 +134,7 @@ export abstract class BaseAccessory {
         this.deviceConfig.name,
         this.platform.generateUUID(this.deviceConfig.id),
         categoryType,
-      );
+      ) as HomebridgeAccessory;
       homebridgeAccessory.context.deviceId = this.deviceConfig.id;
       homebridgeAccessory.controller = this;
       this.log.info(
@@ -163,6 +164,7 @@ export abstract class BaseAccessory {
       this.service = homebridgeAccessory.addService(
         this.serviceType,
         this.deviceConfig.name,
+        this.deviceConfig.id, // subtype
       );
     }
 
@@ -175,23 +177,12 @@ export abstract class BaseAccessory {
   }
 
   private get cache(): Cache {
-    const cache = this.homebridgeAccessory.context.cache;
+    const cache = this.homebridgeAccessory.context.cache as Cache | undefined;
     if (!cache) {
       throw new Error("Device cache not initialized");
     }
     return cache;
   }
-
-  /**
-  private get defaultCharacteristics(): CharacteristicConstructor[] {
-    return [
-      this.platform.Characteristic.Manufacturer,
-      this.platform.Characteristic.Model,
-      this.platform.Characteristic.Name,
-      this.platform.Characteristic.SerialNumber,
-    ];
-  }
-  */
 
   private initializeCharacteristics(): void {
     const deviceSupportedCharacteristics = [
@@ -242,7 +233,7 @@ export abstract class BaseAccessory {
   public validateConfigOverwrites(
     // Must be determined for overwrites down the line.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    config?: Partial<TuyaDeviceDefaults>,
+    config?: Partial<TuyaDeviceDefaults> | TuyaDeviceConfig,
   ): string[] {
     return [];
   }

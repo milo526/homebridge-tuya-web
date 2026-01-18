@@ -7,7 +7,7 @@ import {
   TargetDoorStateCharacteristic,
 } from "./characteristics";
 import { BaseAccessory } from "./BaseAccessory";
-import { TuyaDevice } from "../api/response";
+import type { TuyaDevice } from "../api/response";
 
 export class GarageDoorAccessory extends BaseAccessory {
   constructor(

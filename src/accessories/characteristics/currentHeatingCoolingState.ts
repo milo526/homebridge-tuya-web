@@ -1,7 +1,7 @@
 import { Characteristic, CharacteristicGetCallback } from "homebridge";
 import { TuyaWebCharacteristic } from "./base";
 import { BaseAccessory } from "../BaseAccessory";
-import { DeviceState, ExtendedBoolean } from "../../api/response";
+import type { DeviceState, ExtendedBoolean } from "../../api/response";
 import { TuyaBoolean } from "../../helpers/TuyaBoolean";
 
 export class CurrentHeatingCoolingStateCharacteristic extends TuyaWebCharacteristic {
@@ -59,12 +59,13 @@ export class CurrentHeatingCoolingStateCharacteristic extends TuyaWebCharacteris
       return;
     }
 
-    const mode = {
+    const modeMap: Record<string, number> = {
       auto: this.CurrentHeatingCoolingState.COOL,
       wind: this.CurrentHeatingCoolingState.COOL,
       hot: this.CurrentHeatingCoolingState.HEAT,
       cold: this.CurrentHeatingCoolingState.COOL,
-    }[data?.mode ?? "hot"];
+    };
+    const mode = modeMap[data?.mode ?? "hot"] ?? this.CurrentHeatingCoolingState.HEAT;
     this.debug(
       "[UPDATE] %s",
       mode === this.CurrentHeatingCoolingState.HEAT ? "HEAT" : "COOL",

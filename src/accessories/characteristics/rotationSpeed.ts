@@ -9,7 +9,7 @@ import {
 import { TuyaWebCharacteristic } from "./base";
 import { BaseAccessory } from "../BaseAccessory";
 import { MapRange } from "../../helpers/MapRange";
-import { DeviceState } from "../../api/response";
+import type { DeviceState } from "../../api/response";
 
 export class RotationSpeedCharacteristic extends TuyaWebCharacteristic {
   public static Title = "Characteristic.RotationSpeed";

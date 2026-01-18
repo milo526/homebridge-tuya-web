@@ -2,7 +2,7 @@ import { Characteristic, CharacteristicGetCallback } from "homebridge";
 import { TuyaWebCharacteristic } from "./base";
 import { BaseAccessory } from "../BaseAccessory";
 import { ClimateAccessory } from "../ClimateAccessory";
-import { DeviceState } from "../../api/response";
+import type { DeviceState } from "../../api/response";
 
 export class CurrentTemperatureCharacteristic extends TuyaWebCharacteristic {
   public static Title = "Characteristic.CurrentTemperature";

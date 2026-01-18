@@ -1,7 +1,7 @@
 import { TuyaWebCharacteristic } from "./base";
 import { BaseAccessory } from "../BaseAccessory";
 import { CharacteristicGetCallback } from "homebridge";
-import { DeviceState } from "../../api/response";
+import type { DeviceState } from "../../api/response";
 
 export class TemperatureDisplayUnitsCharacteristic extends TuyaWebCharacteristic {
   public static Title = "Characteristic.TemperatureDisplayUnits";

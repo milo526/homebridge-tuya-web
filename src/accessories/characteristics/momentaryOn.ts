@@ -5,7 +5,7 @@ import {
 } from "homebridge";
 import { TuyaWebCharacteristic } from "./base";
 import { BaseAccessory } from "../BaseAccessory";
-import { DeviceState } from "../../api/response";
+import type { DeviceState } from "../../api/response";
 
 export class MomentaryOnCharacteristic extends TuyaWebCharacteristic {
   public static Title = "Characteristic.MomentaryOn";

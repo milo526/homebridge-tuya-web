@@ -6,7 +6,7 @@ import {
   GeneralCharacteristic,
   RotationSpeedCharacteristic,
 } from "./characteristics";
-import { TuyaDevice } from "../api/response";
+import type { TuyaDevice } from "../api/response";
 
 export class FanAccessory extends BaseAccessory {
   constructor(

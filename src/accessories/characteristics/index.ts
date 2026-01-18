@@ -26,6 +26,7 @@ export * from "./currentDoorState";
 export * from "./currentHeatingCoolingState";
 export * from "./currentPosition";
 export * from "./currentTemperature";
+export * from "./holdPosition";
 export * from "./hue";
 export * from "./momentaryOn";
 export * from "./obstructionDetected";

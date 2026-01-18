@@ -5,7 +5,7 @@ import {
   GeneralCharacteristic,
   MomentaryOnCharacteristic,
 } from "./characteristics";
-import { TuyaDevice } from "../api/response";
+import type { TuyaDevice } from "../api/response";
 
 export class SceneAccessory extends BaseAccessory {
   constructor(

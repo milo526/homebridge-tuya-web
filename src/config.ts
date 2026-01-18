@@ -1,34 +1,64 @@
-import { PlatformConfig } from "homebridge";
-import { TuyaPlatform } from "./api/platform";
-import { TuyaDeviceType } from "./api/response";
+/**
+ * Configuration Types
+ * 
+ * Types for device and plugin configuration.
+ */
 
+/**
+ * Default configuration options for Tuya devices
+ */
 export interface TuyaDeviceDefaults {
-  id: string;
-  device_type: TuyaDeviceType;
-  min_temper: string | number;
-  max_temper: string | number;
-  current_temperature_factor: string | number;
-  target_temperature_factor: string | number;
-  dimmer_characteristics: "Brightness"[];
-  fan_characteristics: "Speed"[];
-  light_characteristics: ("Brightness" | "Color" | "Color Temperature")[];
-  cover_characteristics: "Stop"[];
-  min_brightness: string | number;
-  max_brightness: string | number;
-  min_kelvin: string | number;
-  max_kelvin: string | number;
+  id?: string;
+  name?: string;
+  device_type?: string;
+  
+  // Light characteristics
+  min_brightness?: number | string;
+  max_brightness?: number | string;
+  min_color_temp?: number | string;
+  max_color_temp?: number | string;
+  min_kelvin?: number | string;
+  max_kelvin?: number | string;
+  light_characteristics?: LightCharacteristic[];
+  
+  // Dimmer characteristics
+  dimmer_characteristics?: string[];
+  
+  // Fan characteristics
+  fan_characteristics?: FanCharacteristic[];
+  
+  // Cover characteristics
+  cover_characteristics?: CoverCharacteristic[];
+  
+  // Climate settings
+  min_temp?: number | string;
+  max_temp?: number | string;
+  min_temper?: number | string;
+  max_temper?: number | string;
+  target_temperature_factor?: number | string;
+  current_temperature_factor?: number | string;
+  climate_mode?: ClimateMode[];
+  
+  // Scene options
+  scene?: boolean;
 }
 
-interface Config {
-  options?: {
-    username?: string;
-    password?: string;
-    countryCode?: string;
-    platform?: TuyaPlatform;
-    pollingInterval?: number;
-  };
-  defaults?: Partial<TuyaDeviceDefaults>[];
-  scenes?: boolean | string[];
-}
+/**
+ * Light characteristic options
+ */
+export type LightCharacteristic = 'Brightness' | 'Color' | 'Color Temperature';
 
-export type TuyaWebConfig = PlatformConfig & Config;
+/**
+ * Fan characteristic options
+ */
+export type FanCharacteristic = 'Speed';
+
+/**
+ * Cover characteristic options
+ */
+export type CoverCharacteristic = 'Position';
+
+/**
+ * Climate mode options
+ */
+export type ClimateMode = 'cold' | 'hot' | 'wind' | 'auto';

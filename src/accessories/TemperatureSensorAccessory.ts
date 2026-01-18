@@ -5,8 +5,8 @@ import {
   GeneralCharacteristic,
 } from "./characteristics";
 import { BaseAccessory } from "./BaseAccessory";
-import { TuyaDeviceDefaults } from "../config";
-import { TuyaDevice } from "../api/response";
+import type { TuyaDeviceDefaults } from "../config";
+import type { TuyaDevice } from "../api/response";
 
 export class TemperatureSensorAccessory extends BaseAccessory {
   constructor(

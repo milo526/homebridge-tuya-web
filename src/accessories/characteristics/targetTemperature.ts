@@ -7,7 +7,7 @@ import {
 import { TuyaWebCharacteristic } from "./base";
 import { BaseAccessory } from "../BaseAccessory";
 import { ClimateAccessory } from "../ClimateAccessory";
-import { DeviceState } from "../../api/response";
+import type { DeviceState } from "../../api/response";
 
 export class TargetTemperatureCharacteristic extends TuyaWebCharacteristic {
   public static Title = "Characteristic.TargetTemperature";

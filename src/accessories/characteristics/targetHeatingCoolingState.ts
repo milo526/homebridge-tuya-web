@@ -7,7 +7,7 @@ import {
 import { TuyaWebCharacteristic } from "./base";
 import { BaseAccessory } from "../BaseAccessory";
 import { ClimateMode } from "./index";
-import { DeviceState, ExtendedBoolean } from "../../api/response";
+import type { DeviceState, ExtendedBoolean } from "../../api/response";
 import { TuyaBoolean } from "../../helpers/TuyaBoolean";
 
 export class TargetHeatingCoolingStateCharacteristic extends TuyaWebCharacteristic {
@@ -112,12 +112,13 @@ export class TargetHeatingCoolingStateCharacteristic extends TuyaWebCharacterist
       return;
     }
 
-    const mode = {
+    const modeMap: Record<string, number> = {
       auto: this.TargetHeatingCoolingState.AUTO,
       wind: this.TargetHeatingCoolingState.AUTO,
       hot: this.TargetHeatingCoolingState.HEAT,
       cold: this.TargetHeatingCoolingState.COOL,
-    }[data?.mode ?? "auto"];
+    };
+    const mode = modeMap[data?.mode ?? "auto"] ?? this.TargetHeatingCoolingState.AUTO;
     this.debug(
       "[UPDATE] %s",
       mode === this.TargetHeatingCoolingState.HEAT

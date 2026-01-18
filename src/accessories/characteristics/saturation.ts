@@ -7,7 +7,7 @@ import { COLOR_MODES } from "./index";
 import { TuyaWebCharacteristic } from "./base";
 import { ColorAccessory } from "../ColorAccessory";
 import { BaseAccessory } from "../BaseAccessory";
-import { DeviceState } from "../../api/response";
+import type { DeviceState } from "../../api/response";
 
 export class SaturationCharacteristic extends TuyaWebCharacteristic<ColorAccessory> {
   public static Title = "Characteristic.Saturation";
@@ -53,11 +53,21 @@ export class SaturationCharacteristic extends TuyaWebCharacteristic<ColorAccesso
     let stateValue: number = SaturationCharacteristic.DEFAULT_VALUE;
     if (
       data?.color_mode !== undefined &&
-      data?.color_mode in COLOR_MODES &&
+      (COLOR_MODES as readonly string[]).includes(data.color_mode) &&
       data?.color?.saturation
     ) {
       stateValue = Number(data.color.saturation);
     }
+
+    // Clamp to HomeKit valid range (0-100)
+    if (stateValue < 0) {
+      this.debug("Saturation value %s below 0, clamping to 0", stateValue);
+      stateValue = 0;
+    } else if (stateValue > 100) {
+      this.debug("Saturation value %s above 100, clamping to 100", stateValue);
+      stateValue = 100;
+    }
+    stateValue = Math.round(stateValue);
 
     this.accessory.setCharacteristic(
       this.homekitCharacteristic,

@@ -5,7 +5,7 @@ import {
 } from "homebridge";
 import { TuyaWebCharacteristic } from "./base";
 import { BaseAccessory } from "../BaseAccessory";
-import { DeviceState, ExtendedBoolean } from "../../api/response";
+import type { DeviceState, ExtendedBoolean } from "../../api/response";
 import { TuyaBoolean } from "../../helpers/TuyaBoolean";
 
 export class OnCharacteristic extends TuyaWebCharacteristic {

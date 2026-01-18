@@ -5,10 +5,10 @@ import {
   GeneralCharacteristic,
   PositionStateCharacteristic,
   TargetPositionCharacteristic,
+  HoldPositionCharacteristic,
 } from "./characteristics";
 import { BaseAccessory } from "./BaseAccessory";
-import { TuyaDevice } from "../api/response";
-import { HoldPositionCharacteristic } from "./characteristics/holdPosition";
+import type { TuyaDevice } from "../api/response";
 
 export class CoverAccessory extends BaseAccessory {
   constructor(

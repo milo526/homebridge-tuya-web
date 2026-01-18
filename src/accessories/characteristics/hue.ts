@@ -7,7 +7,7 @@ import { COLOR_MODES } from "./index";
 import { TuyaWebCharacteristic } from "./base";
 import { ColorAccessory } from "../ColorAccessory";
 import { BaseAccessory } from "../BaseAccessory";
-import { DeviceState } from "../../api/response";
+import type { DeviceState } from "../../api/response";
 
 export class HueCharacteristic extends TuyaWebCharacteristic<ColorAccessory> {
   public static Title = "Characteristic.Hue";
@@ -53,11 +53,21 @@ export class HueCharacteristic extends TuyaWebCharacteristic<ColorAccessory> {
     let stateValue: number = HueCharacteristic.DEFAULT_VALUE;
     if (
       data?.color_mode !== undefined &&
-      data?.color_mode in COLOR_MODES &&
+      (COLOR_MODES as readonly string[]).includes(data.color_mode) &&
       data?.color?.hue
     ) {
       stateValue = Number(data.color.hue);
     }
+
+    // Clamp to HomeKit valid range (0-360)
+    if (stateValue < 0) {
+      this.debug("Hue value %s below 0, clamping to 0", stateValue);
+      stateValue = 0;
+    } else if (stateValue > 360) {
+      this.debug("Hue value %s above 360, clamping to 360", stateValue);
+      stateValue = 360;
+    }
+    stateValue = Math.round(stateValue);
 
     this.accessory.setCharacteristic(
       this.homekitCharacteristic,

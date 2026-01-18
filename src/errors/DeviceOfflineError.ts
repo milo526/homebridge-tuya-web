@@ -1,9 +1,12 @@
+/**
+ * DeviceOfflineError
+ * 
+ * Thrown when attempting to interact with a device that is offline.
+ */
 export class DeviceOfflineError extends Error {
-  constructor(specificMessage?: string) {
-    let message = "Device Offline";
-    if (specificMessage) {
-      message = `${message} - ${specificMessage}`;
-    }
+  constructor(message = 'Device is offline') {
     super(message);
+    this.name = 'DeviceOfflineError';
+    Object.setPrototypeOf(this, DeviceOfflineError.prototype);
   }
 }

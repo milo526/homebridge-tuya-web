@@ -6,7 +6,7 @@ import {
   GeneralCharacteristic,
   OnCharacteristic,
 } from "./characteristics";
-import { TuyaDevice } from "../api/response";
+import type { TuyaDevice } from "../api/response";
 
 export class DimmerAccessory extends BaseAccessory {
   constructor(
