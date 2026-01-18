@@ -111,8 +111,12 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     this.initializeApi();
 
     // When Homebridge has restored cached accessories
-    this.hbApi.on('didFinishLaunching', () => {
+    this.hbApi.on('didFinishLaunching', async () => {
       this.log.debug('Homebridge finished launching');
+      
+      // Wait for tokens to be loaded from storage before discovering devices
+      await this.loadAndRestoreTokens();
+      
       this.discoverDevices();
     });
 
@@ -150,9 +154,9 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
 
     // Set up token refresh callbacks to sync tokens between APIs and persist
     this.setupTokenRefreshCallbacks();
-
-    // Load tokens - try storage first (may have refreshed tokens), then config
-    this.loadAndRestoreTokens();
+    
+    // Note: Token loading happens in didFinishLaunching to ensure it completes
+    // before device discovery starts
   }
 
   /**

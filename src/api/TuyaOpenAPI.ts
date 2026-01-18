@@ -81,8 +81,8 @@ export class TuyaOpenAPI {
 
   /**
    * Refresh the access token
-   * Note: Token refresh uses a different signing method that doesn't require 
-   * the (possibly expired) access token in the signature.
+   * For the haauthorize schema, we use the iotbing endpoint (same as QR auth)
+   * without HMAC signing - just query parameters.
    */
   public async refreshAccessToken(): Promise<TuyaTokens> {
     if (!this.tokens?.refreshToken) {
@@ -92,39 +92,39 @@ export class TuyaOpenAPI {
     this.log?.info('Refreshing access token...');
 
     try {
-      // Use the unauthenticated request method for token refresh
-      // The refresh endpoint doesn't require access_token in the signature
-      const response = await this.requestWithoutAccessToken<{
-        access_token: string;
-        refresh_token: string;
-        expire_time: number;
-        uid: string;
-      }>(`/v1.0/token/${this.tokens.refreshToken}`, 'GET');
+      // Use the iotbing endpoint for haauthorize schema token refresh
+      // This is the same endpoint pattern as the QR code auth flow
+      const baseUrl = 'https://apigw.iotbing.com';
+      const url = `${baseUrl}/v1.0/m/life/home-assistant/access/token/refresh?clientid=${TUYA_CLIENT_ID}&refresh_token=${this.tokens.refreshToken}`;
+      
+      this.log?.debug('Token refresh request to:', url);
 
-      if (!response.success || !response.result) {
+      const response = await axios.get(url, { timeout: 15000 });
+      const data = response.data;
+
+      if (!data.success || !data.result) {
         // Log the full error for debugging
-        this.log?.error('Token refresh failed:', JSON.stringify(response));
+        this.log?.error('Token refresh failed:', JSON.stringify(data));
         
         // Check for specific error codes
-        if (response.code === 1010 || response.code === 1004) {
+        if (data.code === 1010 || data.code === 1004 || data.code === 1106) {
           // Token expired or invalid - need to re-authenticate
-          throw new Error(`Token refresh failed (code ${response.code}): ${response.msg}. Please re-link your Tuya account.`);
+          throw new Error(`Token refresh failed (code ${data.code}): ${data.msg}. Please re-link your Tuya account.`);
         }
-        throw new Error(`Failed to refresh token: ${response.msg}`);
+        throw new Error(`Failed to refresh token: ${data.msg || 'Unknown error'}`);
       }
 
-      const { access_token, refresh_token, expire_time, uid } = response.result;
-      
+      const result = data.result;
       this.tokens = {
-        accessToken: access_token,
-        refreshToken: refresh_token,
-        expiresIn: expire_time,
-        expiresAt: Date.now() + expire_time * 1000,
-        uid,
+        accessToken: result.access_token,
+        refreshToken: result.refresh_token,
+        expiresIn: result.expire_time,
+        expiresAt: Date.now() + result.expire_time * 1000,
+        uid: result.uid || this.tokens.uid,
       };
 
       this.scheduleTokenRefresh();
-      this.log?.info('Access token refreshed successfully, expires in', expire_time, 'seconds');
+      this.log?.info('Access token refreshed successfully, expires in', result.expire_time, 'seconds');
 
       // Notify callback so platform can persist tokens and sync with other APIs
       if (this.onTokenRefresh) {
@@ -133,10 +133,72 @@ export class TuyaOpenAPI {
 
       return this.tokens;
     } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response) {
+        const data = error.response.data;
+        this.log?.error('Token refresh HTTP error:', error.response.status, JSON.stringify(data));
+        
+        // Check for 404 - endpoint might not exist, try alternate endpoint
+        if (error.response.status === 404) {
+          return this.refreshAccessTokenAlternate();
+        }
+      }
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.log?.error('Token refresh error:', errorMsg);
       throw error;
     }
+  }
+
+  /**
+   * Alternate token refresh using standard OpenAPI endpoint
+   * Fallback if iotbing endpoint doesn't work
+   */
+  private async refreshAccessTokenAlternate(): Promise<TuyaTokens> {
+    this.log?.info('Trying alternate token refresh endpoint...');
+
+    // Try the standard Tuya OpenAPI refresh endpoint
+    const url = `${TUYA_ENDPOINTS[this.region]}/v1.0/token/${this.tokens!.refreshToken}`;
+    
+    const timestamp = Date.now().toString();
+    const nonce = crypto.randomUUID();
+    const path = `/v1.0/token/${this.tokens!.refreshToken}`;
+    const contentHash = crypto.createHash('sha256').update('').digest('hex');
+    const stringToSign = ['GET', contentHash, '', path].join('\n');
+    const signStr = TUYA_CLIENT_ID + timestamp + nonce + stringToSign;
+    const sign = crypto.createHmac('sha256', '').update(signStr).digest('hex').toUpperCase();
+
+    const response = await axios.get(url, {
+      timeout: 15000,
+      headers: {
+        'client_id': TUYA_CLIENT_ID,
+        't': timestamp,
+        'sign': sign,
+        'sign_method': 'HMAC-SHA256',
+        'nonce': nonce,
+      },
+    });
+
+    const data = response.data;
+    if (!data.success || !data.result) {
+      throw new Error(`Alternate refresh failed: ${data.msg || 'Unknown error'}`);
+    }
+
+    const result = data.result;
+    this.tokens = {
+      accessToken: result.access_token,
+      refreshToken: result.refresh_token,
+      expiresIn: result.expire_time,
+      expiresAt: Date.now() + result.expire_time * 1000,
+      uid: result.uid || this.tokens!.uid,
+    };
+
+    this.scheduleTokenRefresh();
+    this.log?.info('Access token refreshed (alternate), expires in', result.expire_time, 'seconds');
+
+    if (this.onTokenRefresh) {
+      this.onTokenRefresh(this.tokens);
+    }
+
+    return this.tokens;
   }
 
   /**

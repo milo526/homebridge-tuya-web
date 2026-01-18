@@ -126,10 +126,28 @@
         <hr class="mt-4">
         <div class="text-center">
           <p class="mb-2 text-muted"><small>Need to switch accounts or refresh credentials?</small></p>
-          <button class="btn btn-outline-danger btn-sm" onclick="showStartView()">
+          <button class="btn btn-outline-danger btn-sm" onclick="relinkAccount()">
             <i class="fa fa-refresh"></i> Re-link Account
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- View: Token Expired -->
+    <div id="expired-view" class="card hidden border-warning">
+      <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">⚠️ Token Expired</h5>
+      </div>
+      <div class="card-body text-center">
+        <div class="py-4">
+          <i class="fa fa-exclamation-triangle text-warning" style="font-size: 48px;"></i>
+          <h5 class="mt-3">Authentication Expired</h5>
+          <p class="text-muted">Your Tuya access tokens have expired and could not be refreshed.<br>Please re-link your account to continue.</p>
+        </div>
+
+        <button class="btn btn-primary btn-lg" onclick="relinkAccount()">
+          <i class="fa fa-qrcode"></i> Re-link Tuya Account
+        </button>
       </div>
     </div>
 
@@ -244,6 +262,16 @@
       const config = response.config || {};
 
       if (config.tokens && config.tokens.accessToken) {
+        // Check if tokens are expired (with 5 minute buffer)
+        const isExpired = config.tokens.expiresAt && 
+                          (config.tokens.expiresAt < Date.now() + 5 * 60 * 1000);
+
+        if (isExpired) {
+          // Show expired view
+          showView('expired-view');
+          return;
+        }
+
         // Populate Linked View
         document.getElementById('linked-region').textContent = config.region || 'US';
         document.getElementById('linked-uid').textContent = config.tokens.uid || 'Native';
@@ -295,7 +323,7 @@
     }
 
     function showView(viewId) {
-      ['loading-view', 'start-view', 'qr-view', 'success-view', 'linked-view'].forEach(id => {
+      ['loading-view', 'start-view', 'qr-view', 'success-view', 'linked-view', 'expired-view'].forEach(id => {
         document.getElementById(id).classList.add('hidden');
       });
       document.getElementById(viewId).classList.remove('hidden');
@@ -304,6 +332,27 @@
     function showStartView() {
       clearIntervals();
       showView('start-view');
+    }
+
+    // Clear tokens and show start view for re-linking
+    async function relinkAccount() {
+      try {
+        homebridge.toast.info('Clearing existing tokens...');
+        
+        // Clear tokens from config and storage
+        const result = await homebridge.request('/clear-tokens');
+        
+        if (result.success) {
+          homebridge.toast.success('Tokens cleared. Please link your account again.');
+        } else {
+          console.warn('Clear tokens returned:', result);
+        }
+      } catch (e) {
+        console.error('Failed to clear tokens:', e);
+        // Continue anyway - user can still re-link
+      }
+      
+      showStartView();
     }
 
     // Start Linking Process

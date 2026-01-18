@@ -9,10 +9,15 @@ const { HomebridgePluginUiServer } = require('@homebridge/plugin-ui-utils');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
 const axios = require('axios');
+const fs = require('fs').promises;
+const path = require('path');
 
 // Embedded credentials (same as Home Assistant)
 const TUYA_CLIENT_ID = 'HA_3y9q4ak7g4ephrvke';
 const TUYA_SCHEMA = 'haauthorize';
+
+// Token storage file name (must match TokenStorage.ts)
+const TOKEN_FILE_NAME = 'tuya-tokens.json';
 
 
 class TuyaUiServer extends HomebridgePluginUiServer {
@@ -25,6 +30,7 @@ class TuyaUiServer extends HomebridgePluginUiServer {
         this.onRequest('/start-linking', this.startLinking.bind(this));
         this.onRequest('/check-status', this.checkStatus.bind(this));
         this.onRequest('/get-config', this.getConfig.bind(this));
+        this.onRequest('/clear-tokens', this.clearTokens.bind(this));
 
         this.ready();
     }
@@ -168,6 +174,39 @@ class TuyaUiServer extends HomebridgePluginUiServer {
             const config = await this.getPluginConfig();
             return { success: true, config: config[0] || {} };
         } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+       * Clear tokens from config and storage file
+       * This allows re-linking without nuking the entire plugin
+       */
+    async clearTokens() {
+        try {
+            // Clear tokens from config
+            const configs = await this.getPluginConfig();
+            const config = configs[0] || {};
+            
+            delete config.tokens;
+            
+            await this.updatePluginConfig([config]);
+            await this.savePluginConfig();
+
+            // Also try to delete the token storage file
+            try {
+                const storagePath = this.homebridgeStoragePath;
+                const tokenFilePath = path.join(storagePath, TOKEN_FILE_NAME);
+                await fs.unlink(tokenFilePath);
+                console.log('Deleted token storage file:', tokenFilePath);
+            } catch (fileError) {
+                // File might not exist, that's fine
+                console.log('Token storage file not found or could not be deleted:', fileError.message);
+            }
+
+            return { success: true, message: 'Tokens cleared successfully' };
+        } catch (error) {
+            console.error('Clear tokens failed:', error);
             return { success: false, error: error.message };
         }
     }
