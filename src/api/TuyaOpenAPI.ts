@@ -81,13 +81,19 @@ export class TuyaOpenAPI {
 
   /**
    * Refresh the access token
+   * Note: Token refresh uses a different signing method that doesn't require 
+   * the (possibly expired) access token in the signature.
    */
   public async refreshAccessToken(): Promise<TuyaTokens> {
     if (!this.tokens?.refreshToken) {
       throw new Error('No refresh token available');
     }
 
-    const response = await this.request<{
+    this.log?.debug('Refreshing access token...');
+
+    // Use the unauthenticated request method for token refresh
+    // The refresh endpoint doesn't require access_token in the signature
+    const response = await this.requestWithoutAccessToken<{
       access_token: string;
       refresh_token: string;
       expire_time: number;
@@ -117,6 +123,53 @@ export class TuyaOpenAPI {
     }
 
     return this.tokens;
+  }
+
+  /**
+   * Make a request WITHOUT including access_token in the signature.
+   * Used for token refresh and initial token requests.
+   */
+  private async requestWithoutAccessToken<T = unknown>(
+    path: string,
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
+    data?: object,
+  ): Promise<TuyaApiResponse<T>> {
+    const timestamp = Date.now().toString();
+    const nonce = crypto.randomUUID();
+
+    // Content hash
+    const bodyStr = data ? JSON.stringify(data) : '';
+    const contentHash = crypto.createHash('sha256').update(bodyStr).digest('hex');
+
+    // Build string to sign (same format)
+    const stringToSign = [method.toUpperCase(), contentHash, '', path].join('\n');
+
+    // Build signature WITHOUT access_token (for token refresh/get)
+    // Format: client_id + timestamp + nonce + stringToSign
+    const signStr = TUYA_CLIENT_ID + timestamp + nonce + stringToSign;
+    const sign = crypto
+      .createHmac('sha256', '')
+      .update(signStr)
+      .digest('hex')
+      .toUpperCase();
+
+    // Make request directly without using the interceptor
+    const response: AxiosResponse<TuyaApiResponse<T>> = await axios.request({
+      url: TUYA_ENDPOINTS[this.region] + path,
+      method,
+      data,
+      headers: {
+        'client_id': TUYA_CLIENT_ID,
+        't': timestamp,
+        'sign': sign,
+        'sign_method': 'HMAC-SHA256',
+        'nonce': nonce,
+        'Content-Type': 'application/json',
+        // Note: NO access_token header for this request type
+      },
+    });
+
+    return response.data;
   }
 
   /**

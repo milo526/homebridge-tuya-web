@@ -13,7 +13,11 @@ import type { Logger } from 'homebridge';
 import { TUYA_CLIENT_ID } from './credentials';
 import { TuyaTokens } from './TuyaLinkingAuth';
 
-export type TokenRefreshCallback = (tokens: TuyaTokens) => void;
+/**
+ * Callback type for when tokens need to be refreshed.
+ * The callback should perform the refresh and return the new tokens.
+ */
+export type TokenRefreshHandler = () => Promise<TuyaTokens>;
 
 export class TuyaMobileAPI {
   private client: AxiosInstance;
@@ -21,7 +25,7 @@ export class TuyaMobileAPI {
   private userCode?: string; 
   private isRefreshing = false;
   private refreshPromise?: Promise<TuyaTokens>;
-  private onTokenRefresh?: TokenRefreshCallback;
+  private tokenRefreshHandler?: TokenRefreshHandler;
 
   constructor(
     private readonly baseUrl: string,
@@ -42,11 +46,12 @@ export class TuyaMobileAPI {
   }
 
   /**
-   * Set a callback to be called when tokens are refreshed
-   * This allows the platform to persist the new tokens
+   * Set a handler to be called when tokens need to be refreshed.
+   * The handler should perform the actual refresh (e.g., via OpenAPI)
+   * and return the new tokens. The MobileAPI will then update its tokens.
    */
-  public setTokenRefreshCallback(callback: TokenRefreshCallback): void {
-    this.onTokenRefresh = callback;
+  public setTokenRefreshHandler(handler: TokenRefreshHandler): void {
+    this.tokenRefreshHandler = handler;
   }
 
   /**
@@ -61,85 +66,36 @@ export class TuyaMobileAPI {
   }
 
   /**
-   * Refresh the access token using the Mobile API endpoint
-   * Uses the same encrypted request format as other Mobile API calls
+   * Ensure we have a valid token before making requests.
+   * Delegates to the tokenRefreshHandler if tokens are expired.
    */
-  public async refreshAccessToken(): Promise<TuyaTokens> {
-    if (!this.tokens?.refreshToken) {
-      throw new Error('No refresh token available for Mobile API refresh');
+  private async ensureValidToken(): Promise<void> {
+    if (!this.isTokenExpired()) {
+      return;
+    }
+
+    this.log?.debug('Mobile API token expired, requesting refresh...');
+
+    if (!this.tokenRefreshHandler) {
+      throw new Error('Token expired and no refresh handler configured');
     }
 
     // Prevent concurrent refresh attempts
     if (this.isRefreshing && this.refreshPromise) {
-      return this.refreshPromise;
+      await this.refreshPromise;
+      return;
     }
 
     this.isRefreshing = true;
-    this.refreshPromise = this.doRefreshToken();
+    this.refreshPromise = this.tokenRefreshHandler();
 
     try {
-      const tokens = await this.refreshPromise;
-      return tokens;
+      const newTokens = await this.refreshPromise;
+      this.tokens = newTokens;
+      this.log?.debug('Mobile API tokens updated after refresh');
     } finally {
       this.isRefreshing = false;
       this.refreshPromise = undefined;
-    }
-  }
-
-  /**
-   * Internal method to perform token refresh
-   */
-  private async doRefreshToken(): Promise<TuyaTokens> {
-    this.log?.debug('Refreshing Mobile API access token...');
-
-    // The Mobile API uses /v1.0/m/life/ha/access/token/refresh
-    // But we need to make this request WITHOUT the encrypted encdata format
-    // since we're refreshing the token used for encryption
-    
-    // Use the iotbing endpoint which is the same as auth
-    const baseUrl = 'https://apigw.iotbing.com';
-    const path = '/v1.0/m/life/home-assistant/access/refresh';
-    const url = `${baseUrl}${path}?clientid=${TUYA_CLIENT_ID}&refresh_token=${this.tokens!.refreshToken}`;
-
-    try {
-      const response = await axios.get(url);
-      const data = response.data;
-
-      if (!data.success || !data.result) {
-        throw new Error(`Failed to refresh token: ${data.msg || 'Unknown error'}`);
-      }
-
-      const result = data.result;
-      const newTokens: TuyaTokens = {
-        accessToken: result.access_token,
-        refreshToken: result.refresh_token,
-        expiresIn: result.expire_time,
-        expiresAt: Date.now() + result.expire_time * 1000,
-        uid: result.uid || this.tokens!.uid,
-      };
-
-      this.tokens = newTokens;
-      this.log?.debug('Mobile API token refreshed, expires in', result.expire_time, 'seconds');
-
-      // Notify callback so platform can persist tokens
-      if (this.onTokenRefresh) {
-        this.onTokenRefresh(newTokens);
-      }
-
-      return newTokens;
-    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-      this.log?.error('Failed to refresh Mobile API token:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Ensure we have a valid token before making requests
-   */
-  private async ensureValidToken(): Promise<void> {
-    if (this.isTokenExpired()) {
-      this.log?.debug('Mobile API token expired, refreshing...');
-      await this.refreshAccessToken();
     }
   }
 
