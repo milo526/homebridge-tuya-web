@@ -74,10 +74,8 @@ export class TuyaMobileAPI {
       return;
     }
 
-    this.log?.debug('Mobile API token expired, requesting refresh...');
-
     if (!this.tokenRefreshHandler) {
-      throw new Error('Token expired and no refresh handler configured');
+      throw new Error('Token expired. Please re-link your Tuya account.');
     }
 
     // Prevent concurrent refresh attempts
@@ -92,7 +90,6 @@ export class TuyaMobileAPI {
     try {
       const newTokens = await this.refreshPromise;
       this.tokens = newTokens;
-      this.log?.debug('Mobile API tokens updated after refresh');
     } finally {
       this.isRefreshing = false;
       this.refreshPromise = undefined;

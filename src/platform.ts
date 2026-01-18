@@ -205,25 +205,17 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
 
   /**
    * Set up token refresh callbacks and handlers to sync tokens between APIs
-   * - OpenAPI has its own refresh mechanism; callback syncs to MobileAPI
-   * - MobileAPI delegates refresh to OpenAPI via handler
    */
   private setupTokenRefreshCallbacks(): void {
     // When OpenAPI refreshes tokens, sync to MobileAPI and persist
     this.openApi.setTokenRefreshCallback((tokens: TuyaTokens) => {
-      this.log.debug('OpenAPI tokens refreshed, syncing to MobileAPI...');
       this.mobileApi.setTokens(tokens);
       this.persistTokens(tokens);
     });
 
     // When MobileAPI needs to refresh, delegate to OpenAPI
-    // This returns the refreshed tokens which MobileAPI will use
     this.mobileApi.setTokenRefreshHandler(async (): Promise<TuyaTokens> => {
-      this.log.debug('MobileAPI requesting token refresh via OpenAPI...');
-      const newTokens = await this.openApi.refreshAccessToken();
-      // Note: The OpenAPI callback above will sync tokens to MobileAPI,
-      // but we also return them here for the handler to use immediately
-      return newTokens;
+      return await this.openApi.refreshAccessToken();
     });
   }
 
