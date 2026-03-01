@@ -156,8 +156,11 @@ export interface DeviceCodeMapping {
   devType: TuyaDeviceType;
   switchCode: string;
   brightnessCode?: string;
+  brightnessIsV1?: boolean;
   colourCode?: string;
+  colourIsV1?: boolean;
   tempValueCode?: string;
+  tempIsV1?: boolean;
   workModeCode?: string;
   fanSpeedCode?: string;
   controlCode?: string;

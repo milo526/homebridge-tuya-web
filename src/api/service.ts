@@ -388,20 +388,26 @@ export class TuyaWebApi implements SharingTokenListener {
     else if (codes.includes("switch_1")) {mapping.switchCode = "switch_1";}
     else if (codes.includes("switch")) {mapping.switchCode = "switch";}
 
-    if (codes.includes("bright_value_v2"))
-      {mapping.brightnessCode = "bright_value_v2";}
-    else if (codes.includes("bright_value"))
-      {mapping.brightnessCode = "bright_value";}
+    if (codes.includes("bright_value_v2")) {
+      mapping.brightnessCode = "bright_value_v2";
+    } else if (codes.includes("bright_value")) {
+      mapping.brightnessCode = "bright_value";
+      mapping.brightnessIsV1 = true;
+    }
 
-    if (codes.includes("colour_data_v2"))
-      {mapping.colourCode = "colour_data_v2";}
-    else if (codes.includes("colour_data"))
-      {mapping.colourCode = "colour_data";}
+    if (codes.includes("colour_data_v2")) {
+      mapping.colourCode = "colour_data_v2";
+    } else if (codes.includes("colour_data")) {
+      mapping.colourCode = "colour_data";
+      mapping.colourIsV1 = true;
+    }
 
-    if (codes.includes("temp_value_v2"))
-      {mapping.tempValueCode = "temp_value_v2";}
-    else if (codes.includes("temp_value"))
-      {mapping.tempValueCode = "temp_value";}
+    if (codes.includes("temp_value_v2")) {
+      mapping.tempValueCode = "temp_value_v2";
+    } else if (codes.includes("temp_value")) {
+      mapping.tempValueCode = "temp_value";
+      mapping.tempIsV1 = true;
+    }
 
     if (codes.includes("work_mode")) {mapping.workModeCode = "work_mode";}
 
@@ -429,25 +435,46 @@ export class TuyaWebApi implements SharingTokenListener {
           break;
 
         case "bright_value":
+          // v1 range 10-255 → normalize to 10-1000
+          state.brightness = Math.round(
+            ((value as number) - 10) / 245 * 990 + 10,
+          );
+          break;
         case "bright_value_v2":
           state.brightness = value as number;
           break;
 
-        case "colour_data":
-        case "colour_data_v2": {
-          const c: Record<string, number> =
+        case "colour_data": {
+          // v1: h 0-360, s 0-255, v 0-255
+          const c1: Record<string, number> =
             typeof value === "string"
               ? (JSON.parse(value) as Record<string, number>)
               : (value as Record<string, number>);
           state.color = {
-            hue: String(c.h ?? 0),
-            saturation: String(Math.round((c.s ?? 0) / 10)),
-            brightness: String(c.v ?? 0),
+            hue: String(c1.h ?? 0),
+            saturation: String(Math.round(((c1.s ?? 0) / 255) * 100)),
+            brightness: String(Math.round(((c1.v ?? 0) / 255) * 1000)),
+          };
+          break;
+        }
+        case "colour_data_v2": {
+          // v2: h 0-360, s 0-1000, v 0-1000
+          const c2: Record<string, number> =
+            typeof value === "string"
+              ? (JSON.parse(value) as Record<string, number>)
+              : (value as Record<string, number>);
+          state.color = {
+            hue: String(c2.h ?? 0),
+            saturation: String(Math.round((c2.s ?? 0) / 10)),
+            brightness: String(c2.v ?? 0),
           };
           break;
         }
 
         case "temp_value":
+          // v1 range 0-255 → normalize to 0-1000
+          state.color_temp = Math.round(((value as number) / 255) * 1000);
+          break;
         case "temp_value_v2":
           state.color_temp = value as number;
           break;
@@ -522,20 +549,35 @@ export class TuyaWebApi implements SharingTokenListener {
 
       case "brightnessSet": {
         const p = payload as TuyaApiPayload<"brightnessSet">;
+        let bv = p.value;
+        if (meta?.brightnessIsV1) {
+          // v2 range 10-1000 → v1 range 10-255
+          bv = (bv - 10) / 990 * 245 + 10;
+        }
         return [
           {
             code: meta?.brightnessCode ?? "bright_value_v2",
-            value: p.value,
+            value: Math.round(bv),
           },
         ];
       }
 
       case "colorSet": {
         const p = payload as TuyaApiPayload<"colorSet">;
+        let sv: number;
+        let vv: number;
+        if (meta?.colourIsV1) {
+          // saturation: 0-1 → 0-255, brightness: 0-1000 → 0-255
+          sv = Math.round(p.color.saturation * 255);
+          vv = Math.round((p.color.brightness / 1000) * 255);
+        } else {
+          sv = Math.round(p.color.saturation * 1000);
+          vv = Math.round(p.color.brightness);
+        }
         const colorData = {
-          h: p.color.hue,
-          s: Math.round(p.color.saturation * 1000),
-          v: p.color.brightness,
+          h: Math.round(p.color.hue),
+          s: sv,
+          v: vv,
         };
         const colorCmds: { code: string; value: unknown }[] = [];
         if (meta?.workModeCode) {
@@ -550,13 +592,18 @@ export class TuyaWebApi implements SharingTokenListener {
 
       case "colorTemperatureSet": {
         const p = payload as TuyaApiPayload<"colorTemperatureSet">;
+        let tv = p.value;
+        if (meta?.tempIsV1) {
+          // v2 range 0-1000 → v1 range 0-255
+          tv = (tv / 1000) * 255;
+        }
         const tempCmds: { code: string; value: unknown }[] = [];
         if (meta?.workModeCode) {
           tempCmds.push({ code: meta.workModeCode, value: "white" });
         }
         tempCmds.push({
           code: meta?.tempValueCode ?? "temp_value_v2",
-          value: p.value,
+          value: Math.round(tv),
         });
         return tempCmds;
       }
