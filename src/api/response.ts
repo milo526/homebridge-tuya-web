@@ -67,39 +67,6 @@ export interface TuyaDevice {
   config?: Partial<TuyaDeviceDefaults> & { old_dev_type: TuyaDeviceType };
 }
 
-export interface TuyaRequestHeader {
-  name: "Discovery" | "QueryDevice" | TuyaApiMethod;
-  namespace: "discovery" | "query" | "control";
-  payloadVersion: 1;
-}
-
-export interface TuyaResponseHeader {
-  /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
-  code:
-    | "FrequentlyInvoke"
-    | "SUCCESS"
-    | "TargetOffline"
-    | "UnsupportedOperation"
-    | string;
-  /* eslint-enable @typescript-eslint/no-redundant-type-constituents */
-  payloadVersion: 1;
-  msg?: string;
-}
-
-export interface DiscoveryPayload {
-  payload: {
-    devices: TuyaDevice[];
-  };
-  header: TuyaResponseHeader;
-}
-
-export interface DeviceQueryPayload {
-  payload: {
-    data: DeviceState;
-  };
-  header: TuyaResponseHeader;
-}
-
 export type TuyaApiMethod =
   | "brightnessSet"
   | "colorSet"
@@ -127,3 +94,71 @@ export type TuyaApiPayload<Method extends TuyaApiMethod> =
     : Method extends "windSpeedSet"
     ? { value: number }
     : never;
+
+/**
+ * Maps Tuya device categories to our internal device types.
+ * See: https://developer.tuya.com/en/docs/iot/standarddescription?id=K9i5ql6waswzq
+ */
+export const CATEGORY_TO_DEV_TYPE: Record<string, TuyaDeviceType> = {
+  // Lights
+  dj: "light",
+  dd: "light",
+  xdd: "light",
+  fwd: "light",
+  dc: "light",
+  gyd: "light",
+  tyndj: "light",
+  // Switches
+  kg: "switch",
+  tdq: "outlet",
+  pc: "outlet",
+  cz: "outlet",
+  // Fans
+  fs: "fan",
+  fsd: "fan",
+  // Covers
+  cl: "cover",
+  clkg: "cover",
+  // Climate
+  wk: "climate",
+  kt: "climate",
+  // Garage
+  ckmkzq: "garage",
+  // Temperature sensors
+  wsdcg: "temperature_sensor",
+  ldcg: "temperature_sensor",
+  // Dimmers
+  tgq: "dimmer",
+  // Windows
+  mc: "window",
+};
+
+export const DEV_TYPE_TO_HA_TYPE: Record<TuyaDeviceType, HomeAssistantDeviceType> = {
+  climate: "climate",
+  cover: "cover",
+  dimmer: "dimmer",
+  fan: "fan",
+  garage: "switch",
+  light: "light",
+  outlet: "outlet",
+  scene: "scene",
+  switch: "switch",
+  temperature_sensor: "switch",
+  window: "cover",
+};
+
+/**
+ * Metadata stored per device for translating between old method-based
+ * API and new instruction-code-based API.
+ */
+export interface DeviceCodeMapping {
+  category: string;
+  devType: TuyaDeviceType;
+  switchCode: string;
+  brightnessCode?: string;
+  colourCode?: string;
+  tempValueCode?: string;
+  workModeCode?: string;
+  fanSpeedCode?: string;
+  controlCode?: string;
+}

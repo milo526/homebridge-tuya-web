@@ -23,7 +23,6 @@ import { AuthenticationError } from "./errors";
 import { DeviceList } from "./helpers/DeviceList";
 import { TuyaDevice, TuyaDeviceType, TuyaDeviceTypes } from "./api/response";
 import { TuyaWebApi } from "./api/service";
-import { TuyaPlatforms } from "./api/platform";
 import { GarageDoorAccessory } from "./accessories/GarageDoorAccessory";
 import { TemperatureSensorAccessory } from "./accessories/TemperatureSensorAccessory";
 import { Cache } from "./helpers/cache";
@@ -38,20 +37,13 @@ export type HomebridgeAccessory = PlatformAccessory<
   controller?: BaseAccessory;
 };
 
-/**
- * HomebridgePlatform
- * This class is the main constructor for your plugin, this is where you should
- * parse the user config and discover/register accessories with Homebridge.
- */
 export class TuyaWebPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service = this.api.hap.Service;
   public readonly Characteristic: typeof Characteristic =
     this.api.hap.Characteristic;
 
-  // this is used to track restored cached accessories
   public readonly accessories = new Map<string, HomebridgeAccessory>();
 
-  // Cloud polling interval in seconds
   private readonly pollingInterval?: number;
 
   public readonly tuyaWebApi!: TuyaWebApi;
@@ -73,42 +65,22 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     }
     const options = config.options;
 
-    if (
-      options.username === undefined ||
-      options.password === undefined ||
-      options.countryCode === undefined
-    ) {
-      this.log.error("Missing required config parameter.");
+    if (options.userCode === undefined) {
+      this.log.error(
+        "Missing required config parameter: userCode. " +
+          "Get your User Code from the Smart Life app: Me → Profile → Get User Code.",
+      );
       return;
     }
 
-    if (
-      options.platform !== undefined &&
-      !TuyaPlatforms.includes(options.platform)
-    ) {
-      this.log.error(
-        "Invalid platform provided, received %s but must be one of %s",
-        options.platform,
-        TuyaPlatforms,
-      );
-    }
-
-    // Set cloud polling interval
     this.pollingInterval = config.options.pollingInterval;
 
-    // Create Tuya Web API instance
     this.tuyaWebApi = new TuyaWebApi(
-      options.username,
-      options.password,
-      options.countryCode,
-      options.platform,
+      options.userCode,
+      api.user.storagePath(),
       this.log,
     );
 
-    // When this event is fired it means Homebridge has restored all cached accessories from disk.
-    // Dynamic Platform plugins should only register new accessories after this event was fired,
-    // in order to ensure they weren't added to homebridge already. This event can also be used
-    // to start discovery of new accessories.
     this.api.on("didFinishLaunching", () => {
       void this.postLaunchSetup.bind(this)();
     });
@@ -117,11 +89,9 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
   private async postLaunchSetup(): Promise<void> {
     try {
       await this.tuyaWebApi.getOrRefreshToken();
-      // run the method to discover / register your devices as accessories
       await this.discoverDevices();
 
       if (this.pollingInterval) {
-        //Tuya will probably still complain if we fetch a new request on the exact second.
         const pollingInterval = Math.max(
           this.pollingInterval,
           TUYA_DISCOVERY_TIMEOUT + 5,
@@ -130,7 +100,6 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
           "Enable cloud polling with interval %ss",
           pollingInterval,
         );
-        // Set interval for refreshing device states
         setInterval(() => {
           this.refreshDeviceStates().catch((e: unknown) => {
             if (e instanceof Error) {
@@ -160,14 +129,8 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     }
   }
 
-  /**
-   * This function is invoked when homebridge restores cached accessories from disk at startup.
-   * It should be used to set up event handlers for characteristics and update respective values.
-   */
   public configureAccessory(accessory: PlatformAccessory): void {
     this.log.info("Loading accessory from cache:", accessory.displayName);
-
-    // add the restored accessory to the accessories cache, so we can track if it has already been registered
     this.accessories.set(accessory.UUID, accessory);
   }
 
@@ -176,11 +139,9 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [
       accessory,
     ]);
-
     this.accessories.delete(accessory.UUID);
   }
 
-  // Called from device classes
   public registerPlatformAccessory(accessory: PlatformAccessory): void {
     this.log.debug("Register Platform Accessory (%s)", accessory.displayName);
     this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [
@@ -197,7 +158,6 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
       return;
     }
 
-    // Refresh device states
     for (const device of devices) {
       const uuid = this.api.hap.uuid.generate(device.id);
       const homebridgeAccessory = this.accessories.get(uuid);
@@ -220,7 +180,6 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     const uuid = this.api.hap.uuid.generate(device.id);
     const homebridgeAccessory = this.accessories.get(uuid);
 
-    // Construct new accessory
     switch (deviceType) {
       case "cover":
         new CoverAccessory(this, homebridgeAccessory, device);
@@ -255,7 +214,6 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
       case "window":
         new WindowAccessory(this, homebridgeAccessory, device);
         break;
-
       default:
         if (!this.failedToInitAccessories.get(deviceType)) {
           this.log.warn(
@@ -286,7 +244,6 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
   async discoverDevices(): Promise<void> {
     let devices = (await this.tuyaWebApi.discoverDevices()) ?? [];
 
-    // Is device type overruled in config defaults?
     devices = this.applyConfigOverwrites(devices);
     devices.forEach((device) => {
       if (
@@ -319,7 +276,6 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
       }
     }
 
-    // loop over the discovered devices and register each one if it has not already been registered
     for (const device of devices) {
       this.addAccessory(device);
     }
@@ -327,11 +283,6 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     await this.refreshDeviceStates(devices);
   }
 
-  /**
-   * Returns a validated set of defaults and their devices for which the type will need to be overridden.
-   * @param devices
-   * @private
-   */
   private applyConfigOverwrites(devices: TuyaDevice[]): TuyaDevice[] {
     const configOverwriteData = this.config.defaults;
 
@@ -393,11 +344,6 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     return devices;
   }
 
-  /**
-   * Returns a list of all allowed scene Ids.
-   * @param devices
-   * @private
-   */
   private getAllowedSceneIds(devices: TuyaDevice[]): string[] {
     if (!this.config.scenes) {
       return [];
@@ -433,11 +379,6 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     return [...new Set(allowedSceneIds)];
   }
 
-  /**
-   * Returns a list of all devices that are not supposed to be exposed.
-   * @param devices
-   * @private
-   */
   private getHiddenAccessoryIds(devices: TuyaDevice[]): string[] {
     if (!this.config.hiddenAccessories) {
       return [];

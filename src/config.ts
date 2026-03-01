@@ -1,5 +1,4 @@
 import { PlatformConfig } from "homebridge";
-import { TuyaPlatform } from "./api/platform";
 import { TuyaDeviceType } from "./api/response";
 
 export interface TuyaDeviceDefaults {
@@ -21,10 +20,7 @@ export interface TuyaDeviceDefaults {
 
 interface Config {
   options?: {
-    username?: string;
-    password?: string;
-    countryCode?: string;
-    platform?: TuyaPlatform;
+    userCode?: string;
     pollingInterval?: number;
   };
   defaults?: Partial<TuyaDeviceDefaults>[];
