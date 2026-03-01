@@ -10,8 +10,8 @@ import { MapRange } from "../../helpers/MapRange";
 import { BaseAccessory } from "../BaseAccessory";
 import { DeviceState } from "../../api/response";
 
-// Homekit uses mired light units, Tuya uses kelvin
-// Mired = 1.000.000/Kelvin
+// HomeKit uses mired (micro reciprocal degrees): mired = 1,000,000 / Kelvin
+// New Tuya API (temp_value_v2): 0–1000 where 0 = warmest, 1000 = coolest
 
 export class ColorTemperatureCharacteristic extends TuyaWebCharacteristic {
   public static Title = "Characteristic.ColorTemperature";
@@ -27,32 +27,31 @@ export class ColorTemperatureCharacteristic extends TuyaWebCharacteristic {
   public setProps(char?: Characteristic): Characteristic | undefined {
     return char?.setProps({
       format: Formats.INT,
-      minValue: this.minHomekit,
-      maxValue: this.maxHomekit,
+      minValue: this.minMired,
+      maxValue: this.maxMired,
     });
   }
 
-  public get minKelvin(): number {
+  public get minMired(): number {
     const data = this.accessory.deviceConfig.config;
-    return Number(data?.min_kelvin) || 1000000 / 500;
+    if (data?.max_kelvin) {
+      return Math.round(1000000 / Number(data.max_kelvin));
+    }
+    return 140;
   }
 
-  public get maxKelvin(): number {
+  public get maxMired(): number {
     const data = this.accessory.deviceConfig.config;
-    return Number(data?.max_kelvin) || 1000000 / 140;
+    if (data?.min_kelvin) {
+      return Math.round(1000000 / Number(data.min_kelvin));
+    }
+    return 500;
   }
 
-  public get minHomekit(): number {
-    return 1000000 / this.maxKelvin;
-  }
-
-  public get maxHomekit(): number {
-    return 1000000 / this.minKelvin;
-  }
-
-  public rangeMapper = MapRange.tuya(this.maxKelvin, this.minKelvin).homeKit(
-    this.minHomekit,
-    this.maxHomekit,
+  // Tuya 0 (warm) → maxMired, Tuya 1000 (cool) → minMired
+  public rangeMapper = MapRange.tuya(0, 1000).homeKit(
+    this.maxMired,
+    this.minMired,
   );
 
   public getRemoteValue(callback: CharacteristicGetCallback): void {
@@ -78,13 +77,12 @@ export class ColorTemperatureCharacteristic extends TuyaWebCharacteristic {
       return;
     }
 
-    // Set device state in Tuya Web API
     const value = Math.round(this.rangeMapper.homekitToTuya(homekitValue));
 
     this.accessory
       .setDeviceState("colorTemperatureSet", { value }, { color_temp: value })
       .then(() => {
-        this.debug("[SET] %s %s", homekitValue, value);
+        this.debug("[SET] mired=%s tuya=%s", homekitValue, value);
         callback();
       })
       .catch(this.accessory.handleError("SET", callback));
@@ -92,26 +90,24 @@ export class ColorTemperatureCharacteristic extends TuyaWebCharacteristic {
 
   updateValue(data: DeviceState, callback?: CharacteristicGetCallback): void {
     if (data?.color_temp !== undefined) {
-      const tuyaValue = data.color_temp;
+      const tuyaValue = Number(data.color_temp);
       const homekitColorTemp = Math.round(
-        this.rangeMapper.tuyaToHomekit(Number(data.color_temp)),
+        this.rangeMapper.tuyaToHomekit(tuyaValue),
       );
 
-      if (homekitColorTemp > this.maxHomekit) {
+      if (homekitColorTemp > this.maxMired) {
         this.warn(
-          "Characteristic 'ColorTemperature' will receive value higher than allowed mired (%s) since provided Tuya kelvin value (%s) " +
-            "is lower then configured minimum Tuya kelvin value (%s). Please update your configuration!",
+          "ColorTemperature mired (%s) exceeds max (%s) for Tuya value (%s). Check your configuration.",
           homekitColorTemp,
+          this.maxMired,
           tuyaValue,
-          this.rangeMapper.tuyaStart,
         );
-      } else if (homekitColorTemp < this.minHomekit) {
+      } else if (homekitColorTemp < this.minMired) {
         this.warn(
-          "Characteristic 'ColorTemperature' will receive value lower than allowed mired (%s) since provided Tuya kelvin value (%s) " +
-            "exceeds configured maximum Tuya kelvin value (%s). Please update your configuration!",
+          "ColorTemperature mired (%s) below min (%s) for Tuya value (%s). Check your configuration.",
           homekitColorTemp,
+          this.minMired,
           tuyaValue,
-          this.rangeMapper.tuyaEnd,
         );
       }
 

@@ -2,8 +2,8 @@
   "pluginAlias": "TuyaWebPlatform",
   "pluginType": "platform",
   "singular": true,
-  "headerDisplay": "Homebridge plugin for devices using the Tuya Web API.",
-  "footerDisplay": "If you have any suggestions, please open an issue on [GitHub](https://github.com/milo526/homebridge-tuya-web/issues).",
+  "headerDisplay": "Homebridge plugin for Tuya/Smart Life devices. Uses the same API as the Home Assistant Smart Life integration — just enter your User Code and scan a QR code.",
+  "footerDisplay": "After entering your User Code, restart Homebridge and check the logs for the QR code to scan with your Smart Life app.",
   "schema": {
     "type": "object",
     "properties": {
@@ -19,46 +19,16 @@
         "type": "object",
         "required": true,
         "properties": {
-          "username": {
-            "title": "Username",
+          "userCode": {
+            "title": "User Code",
             "type": "string",
-            "required": true
-          },
-          "password": {
-            "title": "Password",
-            "type": "string",
-            "required": true
-          },
-          "countryCode": {
-            "title": "Country Code",
-            "type": "string",
-            "description": "Your account country code, e.g. 1 for USA, 86 for China, 44 for UK.",
-            "required": true
-          },
-          "platform": {
-            "title": "Platform",
-            "type": "string",
-            "default": "form",
-            "oneOf": [
-              {
-                "title": "Tuya Smart",
-                "enum": ["tuya"]
-              },
-              {
-                "title": "Smart Life",
-                "enum": ["smart_life"]
-              },
-              {
-                "title": "Jinvoo Smart",
-                "enum": ["jinvoo_smart"]
-              }
-            ],
-            "required": true
+            "required": true,
+            "description": "Your Smart Life User Code. In the Smart Life app: Me → Settings → Account and Security → User Code."
           },
           "pollingInterval": {
             "title": "Polling Interval",
             "type": "number",
-            "description": "The frequency in seconds that the plugin polls the cloud to get device updates. Can be left empty to only fetch on request. Must be 600 or larger",
+            "description": "The frequency in seconds that the plugin polls the cloud to get device updates. Can be left empty to only fetch on request. Must be 600 or larger.",
             "required": false,
             "minimum": 600
           }
@@ -75,7 +45,7 @@
             "id": {
               "title": "Device name or id",
               "type": "string",
-              "description": "Can be found in your platform app (device info -> virtual ID) and is exposed during plugin boot (use the Tuya ID)",
+              "description": "Device ID shown in debug logs during plugin boot.",
               "required": true
             },
             "device_type": {
@@ -84,50 +54,17 @@
               "default": "form",
               "description": "The type that you want the device to be exposed as",
               "oneOf": [
-                {
-                  "title": "Dimmer",
-                  "enum": ["dimmer"]
-                },
-                {
-                  "title": "Fan",
-                  "enum": ["fan"]
-                },
-                {
-                  "title": "Garage Door",
-                  "enum": ["garage"]
-                },
-                {
-                  "title": "Light",
-                  "enum": ["light"]
-                },
-                {
-                  "title": "Outlet",
-                  "enum": ["outlet"]
-                },
-                {
-                  "title": "Scene",
-                  "enum": ["scene"]
-                },
-                {
-                  "title": "Switch",
-                  "enum": ["switch"]
-                },
-                {
-                  "title": "Temperature Sensor",
-                  "enum": ["temperature_sensor"]
-                },
-                {
-                  "title": "Thermostat",
-                  "enum": ["climate"]
-                },
-                {
-                  "title": "Window Cover",
-                  "enum": ["cover"]
-                },
-                {
-                  "title": "Window",
-                  "enum": ["window"]
-                }
+                { "title": "Dimmer", "enum": ["dimmer"] },
+                { "title": "Fan", "enum": ["fan"] },
+                { "title": "Garage Door", "enum": ["garage"] },
+                { "title": "Light", "enum": ["light"] },
+                { "title": "Outlet", "enum": ["outlet"] },
+                { "title": "Scene", "enum": ["scene"] },
+                { "title": "Switch", "enum": ["switch"] },
+                { "title": "Temperature Sensor", "enum": ["temperature_sensor"] },
+                { "title": "Thermostat", "enum": ["climate"] },
+                { "title": "Window Cover", "enum": ["cover"] },
+                { "title": "Window", "enum": ["window"] }
               ],
               "required": true
             },
@@ -135,7 +72,6 @@
               "title": "Minimal Temperature",
               "type": "string",
               "pattern": "^-?\\d+(?:\\.[05])?$",
-              "description": "The minimal temperature that you want to be able to set in HomeKit, this must be in half degree celsius intervals.",
               "placeholder": "0.0",
               "required": false
             },
@@ -143,7 +79,6 @@
               "title": "Maximal Temperature",
               "type": "string",
               "pattern": "^-?\\d+(?:\\.[05])?$",
-              "description": "The maximal temperature that you want to be able to set in HomeKit, this must be in half degree celsius intervals.",
               "placeholder": "35.0",
               "required": false
             },
@@ -151,35 +86,30 @@
               "title": "Minimal Brightness",
               "type": "string",
               "pattern": "^-?\\d+$",
-              "description": "The brightness value that Tuya returns when your light is off.",
               "required": false
             },
             "max_brightness": {
               "title": "Maximal Brightness",
               "type": "string",
               "pattern": "^-?\\d+$",
-              "description": "The brightness value that Tuya returns when your light is at its brightest.",
               "required": false
             },
             "min_kelvin": {
               "title": "Minimal Kelvin",
               "type": "string",
               "pattern": "^-?\\d+$",
-              "description": "The kelvin value that Tuya returns when your light is at its warmest (most red).",
               "required": false
             },
             "max_kelvin": {
               "title": "Maximal Kelvin",
               "type": "string",
               "pattern": "^-?\\d+$",
-              "description": "The kelvin value that Tuya returns when your light is at its coolest (most blue).",
               "required": false
             },
             "current_temperature_factor": {
               "title": "Temperature Factor",
               "type": "string",
               "pattern": "^\\d+(?:\\.\\d+)?$",
-              "description": "Alters the reported temperatures in HomeKit. I.e. if HomeKit reports 250 while the temperature is 250, enter `0.1` here to report the correct temperature. Defaults to 1, no change.",
               "placeholder": "I.e. 0.1",
               "required": false
             },
@@ -187,7 +117,6 @@
               "title": "Target Temperature Factor",
               "type": "string",
               "pattern": "^\\d+(?:\\.\\d+)?$",
-              "description": "Alters the reported target temperatures in HomeKit. Defaults to 1, no change.",
               "placeholder": "I.e. 0.1",
               "required": false
             },
@@ -195,31 +124,19 @@
               "title": "Features",
               "type": "array",
               "uniqueItems": true,
-              "items": {
-                "title": "Feature",
-                "type": "string",
-                "enum": ["Stop"]
-              }
+              "items": { "title": "Feature", "type": "string", "enum": ["Stop"] }
             },
             "dimmer_characteristics": {
               "title": "Features",
               "type": "array",
               "uniqueItems": true,
-              "items": {
-                "title": "Feature",
-                "type": "string",
-                "enum": ["Brightness"]
-              }
+              "items": { "title": "Feature", "type": "string", "enum": ["Brightness"] }
             },
             "fan_characteristics": {
               "title": "Features",
               "type": "array",
               "uniqueItems": true,
-              "items": {
-                "title": "Feature",
-                "type": "string",
-                "enum": ["Speed"]
-              }
+              "items": { "title": "Feature", "type": "string", "enum": ["Speed"] }
             },
             "light_characteristics": {
               "title": "Features",
@@ -263,19 +180,7 @@
     }
   },
   "layout": [
-    {
-      "type": "flex",
-      "flex-flow": "row wrap",
-      "items": [
-        "options.username",
-        {
-          "key": "options.password",
-          "type": "password"
-        }
-      ]
-    },
-    "options.countryCode",
-    "options.platform",
+    "options.userCode",
     {
       "type": "fieldset",
       "title": "Device Settings",
@@ -285,12 +190,8 @@
         {
           "type": "array",
           "items": [
-            {
-              "key": "defaults[].id"
-            },
-            {
-              "key": "defaults[].device_type"
-            },
+            { "key": "defaults[].id" },
+            { "key": "defaults[].device_type" },
             {
               "key": "defaults[].cover_characteristics",
               "condition": {
@@ -384,12 +285,7 @@
           "title": "Hidden accessories",
           "type": "array",
           "description": "Enter the identifiers of accessories that you wish not to expose to HomeKit.",
-          "items": [
-            {
-              "key": "hiddenAccessories[]",
-              "required": true
-            }
-          ]
+          "items": [{ "key": "hiddenAccessories[]", "required": true }]
         },
         {
           "type": "fieldset",
@@ -400,15 +296,8 @@
               "title": "Whitelisted scene",
               "type": "array",
               "description": "Enter the scenes that you wish to expose to Homekit, when left empty <b>all</b> scenes will be exposed.",
-              "condition": {
-                "functionBody": "return (model.scenes)"
-              },
-              "items": [
-                {
-                  "key": "scenesWhitelist[]",
-                  "required": true
-                }
-              ]
+              "condition": { "functionBody": "return (model.scenes)" },
+              "items": [{ "key": "scenesWhitelist[]", "required": true }]
             }
           ]
         }

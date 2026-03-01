@@ -53,7 +53,7 @@ export class HueCharacteristic extends TuyaWebCharacteristic<ColorAccessory> {
     let stateValue: number = HueCharacteristic.DEFAULT_VALUE;
     if (
       data?.color_mode !== undefined &&
-      data?.color_mode in COLOR_MODES &&
+      (COLOR_MODES as readonly string[]).includes(data?.color_mode ?? "") &&
       data?.color?.hue
     ) {
       stateValue = Number(data.color.hue);

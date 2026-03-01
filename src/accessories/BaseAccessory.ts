@@ -163,6 +163,7 @@ export abstract class BaseAccessory {
       this.service = homebridgeAccessory.addService(
         this.serviceType,
         this.deviceConfig.name,
+        this.serviceType.UUID,
       );
     }
 
