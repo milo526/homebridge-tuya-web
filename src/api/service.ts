@@ -113,7 +113,7 @@ export class TuyaWebApi implements SharingTokenListener {
       "  1. Open the Smart Life app on your phone",
     );
     this.log?.info(
-      "  2. Tap 'Me' → tap your profile → 'Scan QR Code'",
+      "  2. Tap 'Me' → Scan QR Code",
     );
     this.log?.info(
       "  3. Scan the QR code displayed below",

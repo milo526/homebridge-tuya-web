@@ -23,7 +23,7 @@
             "title": "User Code",
             "type": "string",
             "required": true,
-            "description": "Your Smart Life User Code. In the Smart Life app: Me → tap your profile name → tap 'Get User Code'."
+            "description": "Your Smart Life User Code. In the Smart Life app: Me → Settings → Account and Security → User Code."
           },
           "pollingInterval": {
             "title": "Polling Interval",
