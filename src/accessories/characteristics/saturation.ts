@@ -53,7 +53,7 @@ export class SaturationCharacteristic extends TuyaWebCharacteristic<ColorAccesso
     let stateValue: number = SaturationCharacteristic.DEFAULT_VALUE;
     if (
       data?.color_mode !== undefined &&
-      data?.color_mode in COLOR_MODES &&
+      (COLOR_MODES as readonly string[]).includes(data?.color_mode ?? "") &&
       data?.color?.saturation
     ) {
       stateValue = Number(data.color.saturation);

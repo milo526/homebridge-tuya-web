@@ -537,22 +537,28 @@ export class TuyaWebApi implements SharingTokenListener {
           s: Math.round(p.color.saturation * 1000),
           v: p.color.brightness,
         };
-        return [
-          {
-            code: meta?.colourCode ?? "colour_data_v2",
-            value: JSON.stringify(colorData),
-          },
-        ];
+        const colorCmds: { code: string; value: unknown }[] = [];
+        if (meta?.workModeCode) {
+          colorCmds.push({ code: meta.workModeCode, value: "colour" });
+        }
+        colorCmds.push({
+          code: meta?.colourCode ?? "colour_data_v2",
+          value: JSON.stringify(colorData),
+        });
+        return colorCmds;
       }
 
       case "colorTemperatureSet": {
         const p = payload as TuyaApiPayload<"colorTemperatureSet">;
-        return [
-          {
-            code: meta?.tempValueCode ?? "temp_value_v2",
-            value: p.value,
-          },
-        ];
+        const tempCmds: { code: string; value: unknown }[] = [];
+        if (meta?.workModeCode) {
+          tempCmds.push({ code: meta.workModeCode, value: "white" });
+        }
+        tempCmds.push({
+          code: meta?.tempValueCode ?? "temp_value_v2",
+          value: p.value,
+        });
+        return tempCmds;
       }
 
       case "windSpeedSet": {

@@ -31,7 +31,7 @@ export class BrightnessCharacteristic extends TuyaWebCharacteristic {
     const deviceData = this.accessory.deviceConfig.data;
     return (
       deviceData?.color_mode !== undefined &&
-      deviceData?.color_mode in COLOR_MODES &&
+      (COLOR_MODES as readonly string[]).includes(deviceData?.color_mode ?? "") &&
       deviceData?.color?.brightness !== undefined
     );
   }
